@@ -14,7 +14,6 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 		lineDraw = gameObject.AddComponent<LineRenderer>();
 		lineDraw.material = new Material(Shader.Find("Particles/Additive"));
 		lineDraw.SetColors(Color.yellow, Color.yellow);
-		prevVertexNums = vertexNums;
 	}
 
 	// Use this for initialization

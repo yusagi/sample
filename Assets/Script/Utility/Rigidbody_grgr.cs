@@ -2,44 +2,42 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Rigidbody_grgr : MonoBehaviour {
+public class Rigidbody_grgr {
+
+#region メンバ変数
 
 	public float maxVelocitySpeed {get;set;}
 	public Vector3 velocity{ get; set;}
 	public Vector3 prevVelocity{get; set;}
 	public Vector3 prevPosition{get;set;}
-	public bool isMove = true;
-	public float friction = 0.0f;
+	public bool isMove{get;set;}
+	public float friction{get;set;}
 
+	private Transform my;
 
-	void Awake(){
+#endregion
+
+	public Rigidbody_grgr(Transform obj){
+		my = obj;
 		maxVelocitySpeed = Mathf.Infinity;
 		velocity = Vector3.zero;
 		prevVelocity = velocity;
-		prevPosition = transform.position;
-	}
-
-	// Use this for initialization
-	void Start () {
-		
+		prevPosition = my.position;
+		isMove = true;
+		friction = 0.001f;
 	}
 	
 	// Update is called once per frame
-	void Update () {
-	}
-
-	void LateUpdate(){
+	public void Update () {
 		prevVelocity = velocity;
 		
 		velocity *= (1 - friction);
 
 		if (isMove)
-			transform.position += velocity;
+			my.position += velocity;
 	}
 
 	public void AddForce(Vector3 force){
-		// Vector3 vel = (force.magnitude > UtilityMath.epsilon) ? force : velocity;
-		// velocity = vel.normalized * Mathf.Min(velocity.magnitude + force.magnitude, maxVelocitySpeed);
 		Vector3 vel = velocity + force;
 		float speed = Mathf.Min(vel.magnitude, maxVelocitySpeed);
 		velocity = vel.normalized * speed;

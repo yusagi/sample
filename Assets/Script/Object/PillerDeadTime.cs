@@ -4,10 +4,15 @@ using UnityEngine;
 
 public class PillerDeadTime : MonoBehaviour {
 
-	
+#region メンバ変数
+
 	public bool isDead { get; set; }
 	private int DEAD_TIME = 3;
 	private float timer;
+
+#endregion
+
+#region Unity関数
 
 	void Awake(){
 		timer = DEAD_TIME;
@@ -27,4 +32,6 @@ public class PillerDeadTime : MonoBehaviour {
 			}
 		}
 	}
+
+#endregion
 }

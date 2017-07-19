@@ -5,10 +5,14 @@ using UnityEngine.UI;
 
 public class ArrowController : MonoBehaviour {
 	
-	public Vector3 offset;
+#region メンバ変数
 
+	public Vector3 offset;
 	private Image arrow;
 
+#endregion
+
+#region Unity関数
 	void Awake(){
 		Transform player = GameData.GetPlayer();
 		transform.position = player.position;
@@ -29,7 +33,7 @@ public class ArrowController : MonoBehaviour {
 		Transform target = GameData.GetEnemy();
 		Transform player = GameData.GetPlayer();
 
-		if (target.GetComponent<PlanetWalk>().enabled == false){
+		if (target.GetComponent<FEnemyController>().planetWalk.isActive == false){
 			arrow.enabled = false;
 		}
 		else{
@@ -44,4 +48,7 @@ public class ArrowController : MonoBehaviour {
 		transform.position += transform.up * offset.y;
 		transform.position += transform.forward * offset.z;
 	}
+
+#endregion
+
 }

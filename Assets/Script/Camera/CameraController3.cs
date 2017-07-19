@@ -4,23 +4,25 @@ using UnityEngine;
 
 public class CameraController3 : MonoBehaviour {
 
+#region enum
+
     // カメラ状態
 	public enum CameraPhase{
 		NORMAL,
-		CHASE,
 		PULL,
 		BATTLE,
-		HITSTOP,
-		HITSTOP_END,
-		NONE
 	}
 
 	// バトルモードフェーズ
 	public enum Battle{
-		ENCOUNT,
+		START,
 		SKILL_BATTLE_START,
-		SKILL_BATTLE_PLAY,
+		SKILL_BATTLE_END,
 	}
+
+#endregion
+
+#region メンバ変数
 
 	public Vector3 offsetPos{get;set;}
 	public float offsetVerticalAngle{get; set;}
@@ -49,13 +51,13 @@ public class CameraController3 : MonoBehaviour {
 	public float BATTLE_OFFSET_V_ANGLE;
 	public float BATTLE_AREA_ANGLE = 30.0f;
 	public float BATTLE_ENCOUNT_TIMER = 1.0f;
-
-	public bool isPull  =true;
-	public bool isSlow = true;
-	public bool normalOnly = false;
 	
 	public Transform battle_Image;
 	public Transform skillboard_Image;
+
+#endregion
+
+#region Unity関数
 
 	void Awake(){
 		baseRotate = GameData.GetPlayer().rotation;
@@ -75,7 +77,7 @@ public class CameraController3 : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		// Vector3 result;
-		// result = Vector3.ProjectOnPlane(Quaternion.AngleAxis(0, Vector3.right) * Vector3.up, Vector3.up).normalized;
+		// result = Vector3.ProjectOnPlane((Quaternion.AngleAxis(30, Vector3.right) * Vector3.forward), -Vector3.up).normalized;
 		// Debug.Log(result);
 	}
 	
@@ -107,22 +109,11 @@ public class CameraController3 : MonoBehaviour {
 				NormalCamera();
 			}
 			break;
-			// 追いかけモード
-			case CameraPhase.CHASE: {
-				if (phase.IsFirst()){
-					Quaternion tmp = transform.rotation;
-					transform.rotation = baseRotate;
-					hRotate = HorizontalRotate(offsetHorizontalAngle, Mathf.Acos(Vector3.Dot(transform.forward, GameData.GetPlayer().forward)) * Mathf.Rad2Deg);
-					transform.rotation = tmp;
-				}
-				ChaseCamera();
-			}
-			break;
 			// 見下ろしカメラ
 			case CameraPhase.PULL:{
 				if (phase.IsFirst()){
 					float anmSpeed = 1.0f;
-					if (isSlow)
+					//if (isSlow)
 					 anmSpeed = 0.3f;
 					GameData.GetPlayer().GetComponent<Animator>().speed = anmSpeed;
 					GameData.GetEnemy().GetComponent<Animator>().speed =  anmSpeed;
@@ -130,40 +121,47 @@ public class CameraController3 : MonoBehaviour {
 					osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
 				}
 				PullCamera();
+				// 通常カメラ条件
+				if (!IsChangePullCamera()){
+					phase.Change(CameraPhase.NORMAL);
+				}
 			}
 			break;
 			// バトルモード
 			case CameraPhase.BATTLE:{
 				if (phase.IsFirst()){
-					phase_battle.Change(Battle.ENCOUNT);
+					phase_battle.Change(Battle.START);
 				}
 				phase_battle.Start();
 				{
 					switch(phase_battle.current){
 						// エンカウント演出
-						case Battle.ENCOUNT:{
+						case Battle.START:{
 							if(phase_battle.IsFirst()){
-								battle_Image.gameObject.SetActive(true);
 								vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
 								osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
 							}
 
-							if (phase_battle.phaseTime >= BATTLE_ENCOUNT_TIMER){
-								if (battle_Image.gameObject.activeSelf == true)
-									battle_Image.gameObject.SetActive(false);
+							if (phase_battle.phaseTime >= BattleManager.BATTLE_START_TIME){
 								BattleCamera();
 							}
 						}
 						break;
 						case Battle.SKILL_BATTLE_START:{
-							if(phase_battle.IsFirst()){
-								skillboard_Image.gameObject.SetActive(true);
-							}
-							phase_battle.Change(Battle.SKILL_BATTLE_PLAY);
 						}
 						break;
-						case Battle.SKILL_BATTLE_PLAY:{
+						case Battle.SKILL_BATTLE_END:{
+							// 縦回転
+							offsetVerticalAngle = vRotate.Current;
+							
+							// 回転
+							transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
+							
+							// offset
+							offsetPos = osPos.Current;
 
+							// 座標
+							transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
 						}
 						break;
 					}
@@ -171,29 +169,11 @@ public class CameraController3 : MonoBehaviour {
 				phase_battle.Update();
 			}
 			break;
-			case CameraPhase.HITSTOP:{
-			}
-			break;
-			// ヒットストップ終了
-			case CameraPhase.HITSTOP_END:{
-				if (phase.IsFirst()){
-					Quaternion rotate = RotateXYAxis(baseRotate, offsetHorizontalAngle, NORMAL_OFFSET_V_ANGLE);
-					Vector3 position = OffsetPos(rotate, GameData.GetPlayer().position, NORMAL_OFFSET_POS);
-					transform.rotation = rotate;
-					transform.position = position;
-					vRotate = FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
-					while(osPos.MoveNext());
-					osPos = VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
-					while(osPos.MoveNext());
-					phase.Change(CameraPhase.NONE);
-				}
-			}
-			break;
 		}
 		phase.Update();
-		
-		ChangeState();
 	}
+
+#endregion
 
 #region 通常カメラ
 
@@ -244,48 +224,6 @@ public class CameraController3 : MonoBehaviour {
 	}
 #endregion
 
-#region 追跡カメラ
-	void ChaseCamera(){
-		Transform player = GameData.GetPlayer();
-		transform.rotation = baseRotate;
-
-		// プレイヤーが回転していった方向にまわる軸で回転
-		{
-			Vector3 toPlayer = player.up;// (player.position - planet.position).normalized;
-			Vector3 toCamera = transform.up;// (transform.position - planet.position).normalized;
-			float dot = Vector3.Dot(toPlayer, toCamera);
-			dot = Mathf.Clamp(dot, -1, 1);
-			float angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
-			Vector3 axis = Vector3.Cross(toCamera, toPlayer).normalized;
-			transform.rotation = Quaternion.AngleAxis(angle, axis) * transform.rotation;
-		}
-
-		baseRotate = transform.rotation;
-
-		{
-			if (hRotate.MoveNext()){
-				offsetHorizontalAngle = hRotate.Current;
-			}
-
-			Quaternion hTurning = Quaternion.AngleAxis(offsetHorizontalAngle, transform.up);
-			horizontalRotate = hTurning * transform.rotation;
-
-			offsetVerticalAngle = Mathf.Clamp(offsetVerticalAngle, -30.0f, 60.0f);
-			Quaternion vTurning = Quaternion.AngleAxis(offsetVerticalAngle, transform.right);
-
-			transform.rotation = hTurning * vTurning * transform.rotation;
-		}
-
-		// 座標設定
-		transform.position = 
-			player.position +
-			transform.right * offsetPos.x +
-			transform.up * offsetPos.y +
-			transform.forward * offsetPos.z;
-	}
-
-#endregion
-
 #region 見下ろしカメラ
 	void PullCamera(){
 		// 縦回転
@@ -303,18 +241,16 @@ public class CameraController3 : MonoBehaviour {
 #endregion
 
 #region バトルカメラ
-	void BattleCameraIni(){
-	}
 
 	void BattleCamera(){
 		bool tmp_vRot = vRotate.MoveNext();
 		bool tmp_osPos = osPos.MoveNext();
 
 		// 縦回転
-		offsetHorizontalAngle = (tmp_vRot) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
+		offsetVerticalAngle = (tmp_vRot) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
 		
 		// 回転
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetHorizontalAngle);
+		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
 		
 		// offset
 		offsetPos = (tmp_osPos) ? osPos.Current : new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z);
@@ -385,40 +321,7 @@ public class CameraController3 : MonoBehaviour {
 
 #endregion
 
-	// カメラの状態変更
-	void ChangeState(){
-		if (normalOnly){
-			if (phase.current != CameraPhase.NORMAL){
-				phase.Change(CameraPhase.NORMAL);
-			}
-			return;
-		}
-		// 追いかけモード
-		// if (GameData.GetPlayer().GetComponent<PlayerControllerBase>().state == PlayerControllerBase.State.Chase){
-		// 	if (phase.current != CameraPhase.CHASE)
-		// 		phase.Change(CameraPhase.CHASE);
-		// }
-		// 見下ろしモード
-		// if (IsChangePullCamera()){
-		// 	if (phase.current != CameraPhase.BATTLE){
-		// 		phase.Change(CameraPhase.PULL);
-		// 	}
-		// }
-		// バトルしモード
-		if (phase.current == CameraPhase.BATTLE || IsChangePullCamera()){
-			if (phase.current != CameraPhase.BATTLE){
-				GameData.GetPlayer().GetComponent<Animator>().speed = 0;
-				GameData.GetEnemy().GetComponent<Animator>().speed =  0;
-				phase.Change(CameraPhase.BATTLE);
-			}
-		}
-		// 通常モード
-		else{
-			if (phase.current != CameraPhase.NORMAL){
-				phase.Change(CameraPhase.NORMAL);
-			}
-		}
-	}
+#region 共通関数
 
 	// プレイヤーと並行でかつヨウ回転だけしたカメラの回転
 	public Quaternion GetHorizontalRotate(){
@@ -426,15 +329,15 @@ public class CameraController3 : MonoBehaviour {
 	}
 	
 	// プレイヤーと敵の距離が一定値より近いか
-	bool IsChangePullCamera(){
-		if (!isPull)
-			return false;
+	public bool IsChangePullCamera(){
+		// if (!isPull)
+		// 	return false;
 
 		bool result = true;
 
 		Transform target = GameData.GetEnemy();
 
-		if (target.GetComponent<EnemyControllerBase>().state == EnemyControllerBase.State.Ascension)
+		if (target.GetComponent<FEnemyController>().state.current == FEnemyController.State.ASCENSION)
 			result = false;
 
 		Quaternion tmpRotate = transform.rotation;
@@ -512,4 +415,6 @@ public class CameraController3 : MonoBehaviour {
 
 		return position;
 	}
+
+#endregion
 }

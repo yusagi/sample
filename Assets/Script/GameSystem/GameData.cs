@@ -18,6 +18,8 @@ public class GameData : MonoBehaviour{
 	private static Transform enemy;
 	private static Transform planet;
 	private static Transform battleArea;
+	private static Transform battleBoard;
+	private static Transform battleManager;
 
 	void Awake(){
 		killPillers = 0;
@@ -36,7 +38,7 @@ public class GameData : MonoBehaviour{
 	// ゲームタイム
 	void CountGameTime(){
 		if (gameTimer <= 0.0f){
-			player.GetComponent<PlayerController>().enabled = false;
+			player.GetComponent<FPlayerController>().enabled = false;
 		}
 		gameTimer -= Time.deltaTime;
 		float time = ((int)gameTimer) + (float)((int)((gameTimer - ((int)gameTimer)) * 10) * 0.1f);
@@ -87,5 +89,21 @@ public class GameData : MonoBehaviour{
 		}
 
 		return battleArea;
+	}
+
+	public static Transform GetBattleBoard(){
+		if (battleBoard == null){
+			battleBoard = GameObject.Find("BattleBoard").transform;
+		}
+
+		return battleBoard;
+	}
+
+	public static Transform GetBattleManager(){
+		if (battleManager == null){
+			battleManager = GameObject.Find("BattleManager").transform;
+		}
+
+		return battleManager;
 	}
 }
