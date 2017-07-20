@@ -57,12 +57,15 @@ public class CameraController3 : MonoBehaviour {
 
 #endregion
 
+
 #region Unity関数
 
 	void Awake(){
 		baseRotate = GameData.GetPlayer().rotation;
 		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, NORMAL_OFFSET_V_ANGLE);
 		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, NORMAL_OFFSET_POS);
+
+		prevUp = GameData.GetPlayer().up;
 
 		phase.Change(CameraPhase.NORMAL);
 
@@ -77,7 +80,7 @@ public class CameraController3 : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		// Vector3 result;
-		// result = Vector3.ProjectOnPlane((Quaternion.AngleAxis(30, Vector3.right) * Vector3.forward), -Vector3.up).normalized;
+		// result = Vector3.Cross(Vector3.up, Vector3.forward);
 		// Debug.Log(result);
 	}
 	
@@ -85,11 +88,29 @@ public class CameraController3 : MonoBehaviour {
 	void Update () {
 	}
 
+private Vector3 prevUp;
 	void LateUpdate(){
-		baseRotate = GetBaseRotate(baseRotate, GameData.GetPlayer().up);
-		// Debug.DrawRay(GameData.GetPlayer().position, (baseRotate * Vector3.right) * 1000, Color.red);
-		// Debug.DrawRay(GameData.GetPlayer().position, (baseRotate * Vector3.up) * 1000, Color.green);
-		// Debug.DrawRay(GameData.GetPlayer().position, (baseRotate * Vector3.forward) * 1000, Color.blue);
+		Quaternion i;
+		// Vector3 playerProjePlaneUp =  Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(GameData.GetPlayer().up, Vector3.right), Vector3.forward).normalized;
+		// // 表
+		// if (Vector3.Dot(playerProjePlaneUp, Vector3.up) == 1){
+		// 	i = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+		// 	baseRotate = 
+		// }
+		// // 裏
+		// else{
+		// 	i = Quaternion.LookRotation(-Vector3.forward, -Vector3.up);
+		// 	baseRotate = GetBaseRotate(i, GameData.GetPlayer().up);
+		// }
+		//baseRotate = GetBaseRotate(baseRotate, GameData.GetPlayer().up);
+		Vector3 right = Vector3.Cross(prevUp, GameData.GetPlayer().up).normalized;
+		float angle = Mathf.Acos(Vector3.Dot(prevUp, GameData.GetPlayer().up)) * Mathf.Rad2Deg;
+		baseRotate = Quaternion.AngleAxis(angle, right) * baseRotate;
+		prevUp = GameData.GetPlayer().up;
+		// i = baseRotate;
+		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.right) * 1000, Color.red);
+		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.up) * 1000, Color.green);
+		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.forward) * 1000, Color.blue);
 
 		phase.Start();
 		switch(phase.current){
@@ -337,7 +358,7 @@ public class CameraController3 : MonoBehaviour {
 
 		Transform target = GameData.GetEnemy();
 
-		if (target.GetComponent<FEnemyController>().state.current == FEnemyController.State.ASCENSION)
+		if (target.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
 			result = false;
 
 		Quaternion tmpRotate = transform.rotation;

@@ -4,7 +4,7 @@ using UnityEngine;
 
 using UnityEngine.UI;
 
-public class FPlayerController : Charactor {
+public class PlayerController : MonoBehaviour {
 
 #region enum 
 
@@ -43,20 +43,25 @@ public class FPlayerController : Charactor {
 	public float MOVE_TOUCH_STOP_TIME = 1;	// タッチビタ止め条件値
 	// コンポーネント
 	private Animator animator;			// アニメーター
+	// 付属クラス
+	private Rigidbody_grgr rigidbody;
 	// 状態
 	public Phase<State> state = new Phase<State>();
 	private Gear gear;	// ギア
 	// UI
 	public Text curS;	// 速度
+	// 地上からの高さ調整
+	public float HEIGHT_FROM_GROUND = -0.6f;
 	
 #endregion
 
 #region Unity関数
-	new void Awake()
+	void Awake()
 	{
-		PLANET_HEIGHT = -0.6f;
-		base.Awake();
+		rigidbody = new Rigidbody_grgr(transform);
 		rigidbody.isMove = false;
+
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 
 		animator = GetComponent<Animator>();
 
@@ -69,7 +74,7 @@ public class FPlayerController : Charactor {
 	}
 	
 	// Update is called once per frame
-	new void Update () {
+	void Update () {
 		rigidbody.prevPosition = transform.position;
 		
 		state.Start();
@@ -116,13 +121,13 @@ public class FPlayerController : Charactor {
 				float length = rigidbody.GetSpeed() * Time.deltaTime * animator.speed;
 				float angle = length / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
 				transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+				transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 			}
 			break;
 		}
 		state.Update();
 
 		rigidbody.Update();
-		planetWalk.Update(PLANET_HEIGHT);
 		
 		curS.text = (int)rigidbody.GetSpeed() + "km";
 	}
@@ -215,6 +220,7 @@ public class FPlayerController : Charactor {
 				float angle = length / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
 				transform.rotation = Quaternion.LookRotation(rigidbody.velocity.normalized, transform.up);
 				transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+				transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 			}
 
 			// ビタ止め移行モーション変化
@@ -250,8 +256,9 @@ public class FPlayerController : Charactor {
 		
 		float length = mVal * Time.deltaTime;
 		float angle = length / (2.0f*Mathf.PI*planet.transform.localScale.y*0.5f) * 360.0f;
-		Quaternion rotate = Quaternion.LookRotation(moveVelocity.normalized, transform.up);
-		transform.rotation = Quaternion.AngleAxis(angle, transform.right) * rotate;
+		transform.rotation = Quaternion.LookRotation(moveVelocity.normalized, transform.up);
+		transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 	}
 	
 	// フリック移動量
@@ -329,18 +336,17 @@ public class FPlayerController : Charactor {
 		// 敵との衝突処理
 		if (other.gameObject.tag == "Enemy")
 		{
-			if (other.gameObject.GetComponent<Charactor>().planetWalk.isActive == false)
+			if (other.gameObject.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
 				return;
 
 			Vector3 impact = (other.transform.up + rigidbody.velocity.normalized) * rigidbody.GetSpeed() * 0.03f;
-			other.collider.GetComponent<Charactor>().rigidbody.velocity = Vector3.zero;
-			other.collider.GetComponent<Charactor>().rigidbody.AddForce(impact);
+			other.collider.GetComponent<EnemyController>().rigidbody.velocity = Vector3.zero;
+			other.collider.GetComponent<EnemyController>().rigidbody.AddForce(impact);
 
 			Vector3 front = Vector3.ProjectOnPlane(-impact.normalized, other.transform.up).normalized;
 			other.transform.rotation = Quaternion.LookRotation(front, other.transform.up);
 
-			other.collider.GetComponent<Charactor>().planetWalk.isActive = false;
-			other.collider.GetComponent<Charactor>().rigidbody.isMove = true;
+			other.collider.GetComponent<EnemyController>().rigidbody.isMove = true;
 			other.collider.GetComponent<Animator>().SetBool("Run", false);
 			other.collider.GetComponent<Animator>().SetTrigger("DamageDown");
 

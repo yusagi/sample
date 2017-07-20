@@ -12,7 +12,7 @@ public class TouchController : MonoBehaviour {
 		Drag,
 		None
 	}
-
+	
 	public static Vector3 touchStartPos{get;set;}
 	public static Vector3 touchEndPos{get;set;}
 	public static Vector3 currentDragPos{get;set;}
@@ -52,6 +52,7 @@ public class TouchController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+
 		Ray ray = Camera.main.ScreenPointToRay(touchStartPos);
 		RaycastHit hit;
 		isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)Layer.PLANET);

@@ -23,16 +23,10 @@ public class PlanetWalk {
 	void PoseControl(float up)
 	{
 		Transform planet = GameData.GetPlanet();
-		my.position = planet.position + (my.up * planet.localScale.y);
-
+		Vector3 rayStart = planet.position + (my.rotation * Vector3.up * (planet.localScale.y * 0.5f + 0.1f));
 		RaycastHit hitInfo;
-		Physics.Raycast(my.position, (planet.position - my.position).normalized, out hitInfo, Mathf.Infinity, (int)Layer.PLANET);
-		Vector3 front = Vector3.ProjectOnPlane(my.forward, hitInfo.normal);
-		if (front.magnitude < UtilityMath.epsilon)
-			front = Vector3.ProjectOnPlane(my.up, hitInfo.normal);
-		Quaternion rotate = Quaternion.LookRotation(front, hitInfo.normal);
-		my.rotation = rotate;
-		my.position = hitInfo.point + (my.up * my.localScale.y * 0.1f);
+		Physics.Raycast(rayStart, -my.up, out hitInfo, Mathf.Infinity, (int)Layer.PLANET);
+		my.position = hitInfo.point + (my.up * my.localScale.y * 0.5f);
 
 		my.position += my.up * up;
 	}

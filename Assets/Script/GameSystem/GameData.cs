@@ -38,7 +38,7 @@ public class GameData : MonoBehaviour{
 	// ゲームタイム
 	void CountGameTime(){
 		if (gameTimer <= 0.0f){
-			player.GetComponent<FPlayerController>().enabled = false;
+			player.GetComponent<PlayerController>().enabled = false;
 		}
 		gameTimer -= Time.deltaTime;
 		float time = ((int)gameTimer) + (float)((int)((gameTimer - ((int)gameTimer)) * 10) * 0.1f);

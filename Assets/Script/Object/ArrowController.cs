@@ -33,8 +33,9 @@ public class ArrowController : MonoBehaviour {
 		Transform target = GameData.GetEnemy();
 		Transform player = GameData.GetPlayer();
 
-		if (target.GetComponent<FEnemyController>().planetWalk.isActive == false){
+		if (target.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION){
 			arrow.enabled = false;
+			return;
 		}
 		else{
 			arrow.enabled = true;

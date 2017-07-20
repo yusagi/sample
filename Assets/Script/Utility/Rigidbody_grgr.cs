@@ -4,6 +4,18 @@ using UnityEngine;
 
 public class Rigidbody_grgr {
 
+	// 回転からプラネット上の座標を取得
+	public static Vector3 RotateToPosition(Vector3 chrUp, Vector3 planetPosition, float planetRad, float up = 0.0f)
+	{
+		Vector3 rayStart = planetPosition + (chrUp* (planetRad + 0.1f));
+		RaycastHit hitInfo;
+		Physics.Raycast(rayStart, -chrUp, out hitInfo, Mathf.Infinity, (int)Layer.PLANET);
+
+		Vector3 position = hitInfo.point + (chrUp * up);
+		
+		return position;
+	}
+
 #region メンバ変数
 
 	public float maxVelocitySpeed {get;set;}

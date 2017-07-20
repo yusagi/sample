@@ -25,6 +25,10 @@ public class PillerGenerator : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		
+	}
+
+	void LateUpdate(){
 		timer -= Time.deltaTime;
 		if (timer <= 0.0f){
 			int count = GENERATE_NUM;

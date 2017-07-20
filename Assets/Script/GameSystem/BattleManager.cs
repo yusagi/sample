@@ -209,8 +209,8 @@ public class BattleManager : MonoBehaviour {
 			// スキルバトル終了
 			case Battle.SKILL_BATTLE_END:{
 				if (battle.IsFirst()){
-					GameData.GetPlayer().GetComponent<FPlayerController>().state.Change(FPlayerController.State.SKILL_BATTLE_END);
-					GameData.GetEnemy().GetComponent<FEnemyController>().state.Change(FEnemyController.State.SKILL_BATTLE_END);
+					GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.SKILL_BATTLE_END);
+					GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.SKILL_BATTLE_END);
 					GameData.GetCamera().GetComponent<CameraController3>().phase_battle.Change(CameraController3.Battle.SKILL_BATTLE_END);
 				}
 			}
@@ -219,8 +219,8 @@ public class BattleManager : MonoBehaviour {
 			case Battle.BATTLE_END:{
 				battle.Change(Battle.NONE);
 
-				GameData.GetPlayer().GetComponent<FPlayerController>().state.Change(FPlayerController.State.FLICK_MOVE);
-				GameData.GetEnemy().GetComponent<FEnemyController>().state.Change(FEnemyController.State.ASCENSION);
+				GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.FLICK_MOVE);
+				GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
 				GameData.GetCamera().GetComponent<CameraController3>().phase.Change(CameraController3.CameraPhase.NORMAL);
 			}
 			break;
@@ -233,8 +233,8 @@ public class BattleManager : MonoBehaviour {
 		if (battle.current == Battle.NONE && GameData.GetCamera().GetComponent<CameraController3>().IsChangePullCamera()){
 			battle.Change(Battle.BATTLE_START);
 
-			GameData.GetPlayer().GetComponent<FPlayerController>().state.Change(FPlayerController.State.BATTLE);
-			GameData.GetEnemy().GetComponent<FEnemyController>().state.Change(FEnemyController.State.BATTLE);
+			GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.BATTLE);
+			GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
 			GameData.GetCamera().GetComponent<CameraController3>().phase.Change(CameraController3.CameraPhase.BATTLE);
 		}
 	}
