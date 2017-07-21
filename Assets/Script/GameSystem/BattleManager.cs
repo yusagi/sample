@@ -5,7 +5,7 @@ using UnityEngine;
 public class BattleManager : MonoBehaviour {
 
 #region static変数
-	public static float BATTLE_START_TIME = 1.0f;
+	public static float SKILLBATTLE_START_TIME = 1.0f;
 	public static float SKILLBATTLE_PLAY_TIME = 1.0f;
 	public static float SKILLBATTLE_RESULT_TIME = 1.0f;
 #endregion
@@ -14,6 +14,7 @@ public class BattleManager : MonoBehaviour {
 
 	public enum Battle{
 		BATTLE_START,
+		BATTLE_CAMERA,
 		SKILL_BATTLE_START,
 		SKILL_BATTLE_CHOICE,
 		SKILL_BATTLE_PLAY,
@@ -38,18 +39,18 @@ public class BattleManager : MonoBehaviour {
 	List<GameObject> skillCards = new List<GameObject>();
 
 	// 状態
-	public Phase<Battle> battle = new Phase<Battle>();
+	public static Phase<Battle> battle = new Phase<Battle>();
 	SkillChoiceFlick choiceSkill = SkillChoiceFlick.NONE;
 	SkillChoiceFlick eChoiceSkill = SkillChoiceFlick.NONE;
 
 	// 他オブジェクト
-	CameraController3 camera;
+	CameraController camera;
 #endregion
 
 	void Awake(){
 		battle.Change(Battle.NONE);
 
-		camera = GameData.GetCamera().GetComponent<CameraController3>();
+		camera = GameData.GetCamera().GetComponent<CameraController>();
 	}
 
 	// Use this for initialization
@@ -59,7 +60,6 @@ public class BattleManager : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		battle.Start();
 		switch(battle.current){
 			// バトルモード開始
 			case Battle.BATTLE_START:{
@@ -70,9 +70,21 @@ public class BattleManager : MonoBehaviour {
 				}
 
 				// スキルバトルスタートへ
-				if (camera.phase_battle.current == CameraController3.Battle.SKILL_BATTLE_START){
+				if (battle.phaseTime >= SKILLBATTLE_START_TIME){
 					GameData.GetBattleBoard().FindChild("Battle_Encount").gameObject.SetActive(false);
 					battle.Change(Battle.SKILL_BATTLE_START);
+					battle.Start();
+					return;
+				}
+			}
+			break;
+			// カメラ制御
+			case Battle.BATTLE_CAMERA:{
+				// カメラ制御完了
+				if (GameData.GetCamera().GetComponent<CameraController>().battleCameraControlleComp){
+					battle.Change(Battle.SKILL_BATTLE_START);
+					battle.Start();
+					return;
 				}
 			}
 			break;
@@ -121,6 +133,8 @@ public class BattleManager : MonoBehaviour {
 
 					// スキル選択へ
 					battle.Change(Battle.SKILL_BATTLE_CHOICE);
+					battle.Start();
+					return;
 				}
 
 			}
@@ -135,6 +149,8 @@ public class BattleManager : MonoBehaviour {
 					}
 					GameData.GetBattleBoard().FindChild("SkillChoiiceBoard").gameObject.SetActive(false);
 					battle.Change(Battle.SKILL_BATTLE_PLAY);
+					battle.Start();
+					return;
 				}
 			}
 			break;
@@ -191,6 +207,8 @@ public class BattleManager : MonoBehaviour {
 					}
 					GameData.GetBattleBoard().FindChild("SkillBattleBoard").gameObject.SetActive(false);
 					battle.Change(Battle.SKILL_BATTLE_RESULT);
+					battle.Start();
+					return;
 				}
 			}
 			break;
@@ -203,25 +221,26 @@ public class BattleManager : MonoBehaviour {
 				if (battle.phaseTime >= SKILLBATTLE_RESULT_TIME){
 					GameData.GetBattleBoard().FindChild("SkillBattleResultBoard").gameObject.SetActive(false);
 					battle.Change(Battle.SKILL_BATTLE_END);
+					battle.Start();
+					return;
 				}
 			}
 			break;
 			// スキルバトル終了
 			case Battle.SKILL_BATTLE_END:{
-				if (battle.IsFirst()){
-					GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.SKILL_BATTLE_END);
-					GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.SKILL_BATTLE_END);
-					GameData.GetCamera().GetComponent<CameraController3>().phase_battle.Change(CameraController3.Battle.SKILL_BATTLE_END);
+				if (GameData.GetEnemy().GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION){
+					battle.Change(Battle.BATTLE_END);
+					battle.Start();
+
+					GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.FLICK_MOVE);
+					GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.NORMAL);
 				}
 			}
 			break;
 			// バトル終了
 			case Battle.BATTLE_END:{
 				battle.Change(Battle.NONE);
-
-				GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.FLICK_MOVE);
-				GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
-				GameData.GetCamera().GetComponent<CameraController3>().phase.Change(CameraController3.CameraPhase.NORMAL);
+				battle.Start();
 			}
 			break;
 		}
@@ -230,12 +249,13 @@ public class BattleManager : MonoBehaviour {
 
 	void LateUpdate(){
 		// バトルモード条件
-		if (battle.current == Battle.NONE && GameData.GetCamera().GetComponent<CameraController3>().IsChangePullCamera()){
+		if (battle.current == Battle.NONE && GameData.GetCamera().GetComponent<CameraController>().IsChangePullCamera()){
 			battle.Change(Battle.BATTLE_START);
+			battle.Start();
 
 			GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.BATTLE);
 			GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
-			GameData.GetCamera().GetComponent<CameraController3>().phase.Change(CameraController3.CameraPhase.BATTLE);
+			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
 		}
 	}
 }

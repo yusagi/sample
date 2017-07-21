@@ -10,7 +10,6 @@ public class EnemyController : MonoBehaviour {
 			MOVE,
 			ASCENSION,
 			BATTLE,
-			SKILL_BATTLE_END
 		}
 
 #endregion
@@ -75,17 +74,26 @@ public class EnemyController : MonoBehaviour {
 			}
 			break;
 			case State.BATTLE:{
-				if (state.IsFirst()){
-					animator.speed = 0.0f;
+				switch(BattleManager.battle.current){
+					case BattleManager.Battle.BATTLE_START:{
+						if (BattleManager.battle.IsFirst()){
+							animator.speed = 0.0f;
+						}
+					}
+					break;
+					case BattleManager.Battle.SKILL_BATTLE_END:{
+						if (BattleManager.battle.IsFirst()){
+							animator.speed = 1.0f;
+						}
+						Move();
+					}
+					break;
+					default:{
+						animator.speed = 0.1f;
+						Move();
+					}
+					break;
 				}
-			}
-			break;
-			case State.SKILL_BATTLE_END:{
-				if (state.IsFirst()){
-					animator.speed = 1.0f;
-				}
-
-				Move();
 			}
 			break;
 		}
@@ -111,6 +119,7 @@ public class EnemyController : MonoBehaviour {
 	void Ascension(){
 		ascensionTimer -= Time.deltaTime;
 		if (ascensionTimer < 0){
+			rigidbody.isMove = false;
 			transform.rotation = Random.rotation;
 			ascensionTimer = ASCENSION_TIME;
 			state.Change(State.MOVE);

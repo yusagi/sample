@@ -31,7 +31,7 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 		lineDraw.numPositions = vertexNums;
 		List<Vector3> vertexs = new List<Vector3>();
 		Quaternion pRotate = GameData.GetPlayer().rotation;
-		float vAngle = GameData.GetCamera().GetComponent<CameraController3>().BATTLE_AREA_ANGLE;
+		float vAngle = GameData.GetCamera().GetComponent<CameraController>().BATTLE_AREA_ANGLE;
 		for(int i = 0; i <= vertexNums; i++){
 			Vector3 p;
 			Quaternion rotate = Quaternion.AngleAxis(i, pRotate * Vector3.up) * pRotate;

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CameraController3 : MonoBehaviour {
+public class CameraController : MonoBehaviour {
 
 #region enum
 
@@ -13,13 +13,6 @@ public class CameraController3 : MonoBehaviour {
 		BATTLE,
 	}
 
-	// バトルモードフェーズ
-	public enum Battle{
-		START,
-		SKILL_BATTLE_START,
-		SKILL_BATTLE_END,
-	}
-
 #endregion
 
 #region メンバ変数
@@ -27,33 +20,32 @@ public class CameraController3 : MonoBehaviour {
 	public Vector3 offsetPos{get;set;}
 	public float offsetVerticalAngle{get; set;}
 	public float offsetHorizontalAngle{get;set;}
-	public float dragSpeed = 1.0f;
+	public float dragSpeed = 8.0f;
 	public float DRAG_PERMISSION = 10.0f;
-	public float slowSpeed = 0.3f;
 	
+	private Vector3 baseFront;
+	private Vector3 baseRight;
 	private Quaternion baseRotate;
 	private Quaternion horizontalRotate = Quaternion.identity;
 
 	public Phase<CameraPhase> phase = new Phase<CameraPhase>();
-	public Phase<Battle> phase_battle = new Phase<Battle>();
 
 	private IEnumerator<float> hRotate;
 	private IEnumerator<float> vRotate;
 	private IEnumerator<Vector3> osPos;
 
-	public Vector3 NORMAL_OFFSET_POS;
-	public float NORMAL_OFFSET_V_ANGLE;
+	public Vector3 NORMAL_OFFSET_POS = new Vector3(0, 3.4f, -7);
+	public float NORMAL_OFFSET_V_ANGLE = 16.5f;
 
 	public float PULL_OFFSET_POS_Z = -28;
 	public float PULL_OFFSET_V_ANGLE = 31;
 
 	public float BATTLE_OFFSET_POS_Z = 50;
-	public float BATTLE_OFFSET_V_ANGLE;
-	public float BATTLE_AREA_ANGLE = 30.0f;
-	public float BATTLE_ENCOUNT_TIMER = 1.0f;
-	
-	public Transform battle_Image;
-	public Transform skillboard_Image;
+	public float BATTLE_OFFSET_V_ANGLE = 0;
+	public float BATTLE_AREA_ANGLE = 30;
+	public float BATTLE_ENCOUNT_TIMER = 1;
+
+	public bool battleCameraControlleComp{get;set;}
 
 #endregion
 
@@ -61,11 +53,10 @@ public class CameraController3 : MonoBehaviour {
 #region Unity関数
 
 	void Awake(){
+		baseFront = GameData.GetPlayer().forward;
 		baseRotate = GameData.GetPlayer().rotation;
 		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, NORMAL_OFFSET_V_ANGLE);
 		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, NORMAL_OFFSET_POS);
-
-		prevUp = GameData.GetPlayer().up;
 
 		phase.Change(CameraPhase.NORMAL);
 
@@ -76,41 +67,21 @@ public class CameraController3 : MonoBehaviour {
 		osPos = VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
 		while(osPos.MoveNext());
 	}
-
 	// Use this for initialization
 	void Start () {
 		// Vector3 result;
-		// result = Vector3.Cross(Vector3.up, Vector3.forward);
-		// Debug.Log(result);
+		// Vector3 rUp = Quaternion.AngleAxis(r, Vector3.forward) * Quaternion.AngleAxis(f, Vector3.right) * Vector3.up;
+		// result = Vector3.ProjectOnPlane(Vector3.forward, rUp);
+		// Debug.Log("result " + result);
+		// Debug.Log("rUp " + rUp);
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	}
-
-private Vector3 prevUp;
+	
 	void LateUpdate(){
-		Quaternion i;
-		// Vector3 playerProjePlaneUp =  Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(GameData.GetPlayer().up, Vector3.right), Vector3.forward).normalized;
-		// // 表
-		// if (Vector3.Dot(playerProjePlaneUp, Vector3.up) == 1){
-		// 	i = Quaternion.LookRotation(Vector3.forward, Vector3.up);
-		// 	baseRotate = 
-		// }
-		// // 裏
-		// else{
-		// 	i = Quaternion.LookRotation(-Vector3.forward, -Vector3.up);
-		// 	baseRotate = GetBaseRotate(i, GameData.GetPlayer().up);
-		// }
-		//baseRotate = GetBaseRotate(baseRotate, GameData.GetPlayer().up);
-		Vector3 right = Vector3.Cross(prevUp, GameData.GetPlayer().up).normalized;
-		float angle = Mathf.Acos(Vector3.Dot(prevUp, GameData.GetPlayer().up)) * Mathf.Rad2Deg;
-		baseRotate = Quaternion.AngleAxis(angle, right) * baseRotate;
-		prevUp = GameData.GetPlayer().up;
-		// i = baseRotate;
-		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.right) * 1000, Color.red);
-		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.up) * 1000, Color.green);
-		// Debug.DrawRay(GameData.GetPlanet().position, (i * Vector3.forward) * 1000, Color.blue);
+		baseRotate = GetBaseRotate(baseRotate, GameData.GetPlayer().up);
 
 		phase.Start();
 		switch(phase.current){
@@ -151,43 +122,46 @@ private Vector3 prevUp;
 			// バトルモード
 			case CameraPhase.BATTLE:{
 				if (phase.IsFirst()){
-					phase_battle.Change(Battle.START);
+					vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
+					osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
 				}
-				phase_battle.Start();
-				{
-					switch(phase_battle.current){
-						// エンカウント演出
-						case Battle.START:{
-							if(phase_battle.IsFirst()){
-								vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
-								osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
-							}
-
-							if (phase_battle.phaseTime >= BattleManager.BATTLE_START_TIME){
-								BattleCamera();
-							}
-						}
-						break;
-						case Battle.SKILL_BATTLE_START:{
-						}
-						break;
-						case Battle.SKILL_BATTLE_END:{
-							// 縦回転
-							offsetVerticalAngle = vRotate.Current;
-							
-							// 回転
-							transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
-							
-							// offset
-							offsetPos = osPos.Current;
-
-							// 座標
-							transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
-						}
-						break;
+				switch(BattleManager.battle.current){
+					case BattleManager.Battle.BATTLE_START:{
 					}
+					break;
+					// カメラ制御
+					case BattleManager.Battle.BATTLE_CAMERA:{
+						if (BattleManager.battle.IsFirst()){
+							vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
+							osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
+							battleCameraControlleComp = false;
+						}
+
+						if (BattleCamera()){
+							battleCameraControlleComp = true;
+						}
+					} 
+					break;
+					// スキルバトル終了
+					case BattleManager.Battle.SKILL_BATTLE_END:{
+						// 縦回転
+						offsetVerticalAngle = vRotate.Current;
+						
+						// 回転
+						transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
+						
+						// offset
+						offsetPos = osPos.Current;
+
+						// 座標
+						transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
+					}
+					break;
+					default:{
+						BattleCamera();
+					}	
+					break;
 				}
-				phase_battle.Update();
 			}
 			break;
 		}
@@ -263,7 +237,7 @@ private Vector3 prevUp;
 
 #region バトルカメラ
 
-	void BattleCamera(){
+	bool BattleCamera(){
 		bool tmp_vRot = vRotate.MoveNext();
 		bool tmp_osPos = osPos.MoveNext();
 
@@ -279,9 +253,8 @@ private Vector3 prevUp;
 		// 座標
 		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
 
-		if (!tmp_vRot && !tmp_osPos){
-			phase_battle.Change(Battle.SKILL_BATTLE_START);
-		}
+
+		return !tmp_vRot && !tmp_osPos;
 	}
 #endregion
 
@@ -402,14 +375,6 @@ private Vector3 prevUp;
 
 	// rotateの体勢で上方向がupと並行になる回転を取得
 	public Quaternion GetBaseRotate(Quaternion rotate, Vector3 up){
-			// Vector3 toPlayer = GameData.GetPlayer().up;// (player.position - planet.position).normalized;
-			// Vector3 toCamera = rotate * Vector3.up;// (transform.position - planet.position).normalized;
-			// float dot = Vector3.Dot(toPlayer, toCamera);
-			// dot = Mathf.Clamp(dot, -1, 1);
-			// float angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
-			// Vector3 axis = Vector3.Cross(toCamera, toPlayer).normalized;
-			// return Quaternion.AngleAxis(angle, axis) * rotate;
-
 			Vector3 front = (rotate * Vector3.forward).normalized;
 			front = Vector3.ProjectOnPlane(front, up).normalized;
 			return Quaternion.LookRotation(front, up);
