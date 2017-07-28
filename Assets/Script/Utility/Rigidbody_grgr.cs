@@ -41,8 +41,6 @@ public class Rigidbody_grgr {
 	
 	// Update is called once per frame
 	public void Update () {
-		prevVelocity = velocity;
-		
 		velocity *= (1 - friction);
 
 		if (isMove)

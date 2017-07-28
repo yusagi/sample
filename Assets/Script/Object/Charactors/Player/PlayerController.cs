@@ -13,6 +13,7 @@ public class PlayerController : MonoBehaviour {
 		FLICK_MOVE,
 		DRAG_MOVE,
 		BATTLE,
+		ASCENSION,
 	}
 
 	enum Gear{
@@ -36,6 +37,7 @@ public class PlayerController : MonoBehaviour {
 	public float gearSecondAccele = 2.0f;	// ギア2加速度
 	public float gearThirdAccele = 0.8f;	// ギア3加速度
 	public float maxSpeed = 50.0f;			// 最高速度
+	public float resultSpeed = 10.0f;
 	public Vector3 currentVelocity{get;set;}	// 最新フレームのフリック移動量
 	// ビタ止め
 	public float MOVE_FRICK_STOP_ANGLE = 0;	// フリックビタ止め条件値
@@ -43,7 +45,8 @@ public class PlayerController : MonoBehaviour {
 	// コンポーネント
 	private Animator animator;			// アニメーター
 	// 付属クラス
-	private Rigidbody_grgr rigidbody;
+	public Rigidbody_grgr rigidbody;
+	public SkillManager skillManager{get;set;}
 	// 状態
 	public Phase<State> state = new Phase<State>();
 	private Gear gear;	// ギア
@@ -53,12 +56,26 @@ public class PlayerController : MonoBehaviour {
 	public float HEIGHT_FROM_GROUND = -0.6f;
 	// 敵との衝突フラグ
 	public bool isEnemyCollision{get;set;}
+	// ASCENSION用
+	private float ascensionTimer = 0;
+	private float ASCENSION_TIME = 3.0f;
+	// HP
+	public float hp = 100;
+	// AP
+	public float ap{get;set;}
 	
 #endregion
 
 #region Unity関数
 	void Awake()
 	{
+		skillManager = new SkillManager();
+		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.PUNCH]);
+		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.KICK]);
+		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.HIGH_KICK]);
+		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.DEFENSE]);
+		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.COUNTER]);
+		
 		rigidbody = new Rigidbody_grgr(transform);
 		rigidbody.isMove = false;
 
@@ -68,6 +85,8 @@ public class PlayerController : MonoBehaviour {
 
 		gear = Gear.First;
 		state.Change(State.STOP);
+
+		ascensionTimer = ASCENSION_TIME;
 	}
 
 	// Use this for initialization
@@ -76,13 +95,20 @@ public class PlayerController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		// 最大速度を変更
+		rigidbody.maxVelocitySpeed = maxSpeed;
+
 		rigidbody.prevPosition = transform.position;
+		rigidbody.prevVelocity = rigidbody.velocity;
 		
 		state.Start();
 		switch(state.current){
 			// ストップ状態
 			case State.STOP: {
-				currentVelocity = Vector3.zero;
+				if (state.IsFirst()){
+					currentVelocity = Vector3.zero;
+					transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y*0.5f, HEIGHT_FROM_GROUND);
+				}
 				
 				// ドラッグ移動条件
 				if (TouchController.GetTouchType() == TouchController.TouchType.Drag){
@@ -121,12 +147,8 @@ public class PlayerController : MonoBehaviour {
 			// フリック移動状態
 			case State.FLICK_MOVE: {
 				currentVelocity = FlickVelocity();
-				// 最新のフリック移動量
-				float fmVal = currentVelocity.magnitude;
-				// 現在のリジッドボディの移動量
-				float rmVal = rigidbody.GetSpeed();
 				// 現在フレームの移動量
-				float s = (fmVal + rmVal) * Time.deltaTime;
+				float s = (currentVelocity.magnitude + rigidbody.GetSpeed()) * Time.deltaTime;
 				// ストップ移動条件
 				if (s < UtilityMath.epsilon || IsMoveStop()){
 					rigidbody.velocity = Vector3.zero;
@@ -149,27 +171,94 @@ public class PlayerController : MonoBehaviour {
 				}
 			}
 			break;
+			// 昇天
+			case State.ASCENSION:{
+				Ascension();
+			}
+			break;
 			// バトル状態
 			case State.BATTLE:{
-				switch(BattleManager.battle.current){
-					case BattleManager.Battle.BATTLE_START:{
-						if (BattleManager.battle.IsFirst()){
-							animator.speed = 0.0f;
+				if (state.IsFirst()){
+					currentVelocity = Vector3.zero;
+					animator.speed = BattleManager._instance.SLOW_START;
+				}
+				switch(BattleManager._instance.battle.current){
+					// スキルバトル結果
+					case BattleManager.Battle.SKILL_BATTLE_RESULT:{
+						if (BattleManager._instance.battle.IsFirst()){
+							animator.speed = 1.0f;
+						}
+
+						// 勝敗
+						switch(skillManager.result){
+							// 勝ち
+							case SkillAttributeResult.WIN:{
+								Vector3 toEnemy = GameData.GetEnemy().position - GameData.GetPlayer().position;
+								Vector3 front = Vector3.ProjectOnPlane(toEnemy.normalized, transform.up).normalized;
+								GrgrAddForce(front * resultSpeed);
+								GearChange();
+								GrgrMove(rigidbody.velocity);
+							}
+							break;
+							// それ以外
+							default:{
+								FlickMove();
+							}
+							break;
 						}
 					}
 					break;
-					case BattleManager.Battle.SKILL_BATTLE_END:{
-						if (BattleManager.battle.IsFirst()){
+					// バトル終了
+					case BattleManager.Battle.BATTLE_END:{
+						if (BattleManager._instance.battle.IsFirst()){
 							animator.speed = 1.0f;
+							state.Change(State.FLICK_MOVE);
 						}
-						Vector3 toEnemy = GameData.GetEnemy().position - GameData.GetPlayer().position;
-						Vector3 front = Vector3.ProjectOnPlane(toEnemy.normalized, transform.up).normalized;
-						rigidbody.velocity = front * rigidbody.GetSpeed();
-						GrgrMove(rigidbody.velocity);
 					}
 					break;
 					default:{
-						animator.speed = 0.1f;
+						float time = (BattleManager._instance.SLOW_TOTAL_TIME - BattleManager._instance.slowTimer);
+						switch(BattleManager._instance.slowType){
+							case BattleManager.SlowType.LINER:{
+								float start = BattleManager._instance.SLOW_START;
+								float end = BattleManager._instance.SLOW_END;
+								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.LINEAR, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
+							}
+							break;
+							case BattleManager.SlowType.IN_CUBIC:{
+								float start = BattleManager._instance.SLOW_START;
+								float end = BattleManager._instance.SLOW_END;
+								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.IN_CUBIC, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
+							}
+							break;
+							case BattleManager.SlowType.OUT_QUART:{
+								float start = BattleManager._instance.SLOW_START;
+								float end = BattleManager._instance.SLOW_END;
+								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.OUT_QUART, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
+							}
+							break;
+							case BattleManager.SlowType.LINER2:{
+								float t;
+								float start;
+								float end;
+								float totalTime;
+								if (time < BattleManager._instance.SLOW_TIME){
+									t = time;
+									totalTime = BattleManager._instance.SLOW_TIME;
+									start = BattleManager._instance.SLOW_START;
+									end = BattleManager._instance.SLOW_END;
+								}
+								else{
+									t = time - BattleManager._instance.SLOW_TIME;
+									totalTime = BattleManager._instance.SLOW_TIME2;
+									start = BattleManager._instance.SLOW_START2;
+									end = BattleManager._instance.SLOW_END2;
+								}
+
+								animator.speed = (float)UtilityMath.Linear(t, totalTime, end, start);
+							}
+							break;
+						}
 						FlickMove();
 					}
 					break;
@@ -178,8 +267,8 @@ public class PlayerController : MonoBehaviour {
 			break;
 		}
 		state.Update();
-		
-		curS.text = (int)rigidbody.GetSpeed() + "km";
+
+		curS.text = (int)(rigidbody.GetSpeed() * 1) + "km";
 	}
 
 	
@@ -199,66 +288,50 @@ public class PlayerController : MonoBehaviour {
 			transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
 		}
 		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
-		
+	}
+
+	// 球体ぐるぐるrigidbody.velocity加算
+	void GrgrAddForce(Vector3 veloctiy){
+		// リジッドボディのベクトルを変更
+		Vector3 front;
+		// フリック方向
+		if (veloctiy.magnitude > UtilityMath.epsilon){
+			front = veloctiy.normalized;
+		}
+		// リジッドボディのベクトルをプレイヤーの立つ平面に投射したベクトル
+		else{
+			front = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized;
+		}
+		rigidbody.velocity = front * rigidbody.GetSpeed();
+		rigidbody.AddForce(veloctiy);
 	}
 
 	// フリック移動処理
 	void FlickMove(){
-		// 最新のフリック移動量
-		float fmVal = currentVelocity.magnitude;
-		// 現在のリジッドボディの移動量
-		float rmVal = rigidbody.GetSpeed();
-
 		// フリックを移動量に加算
 		{
-			// 最大速度を変更
-			rigidbody.maxVelocitySpeed = maxSpeed;
-			// リジッドボディのベクトルを変更
-			Vector3 front;
-			// フリック方向
-			if (fmVal > UtilityMath.epsilon){
-				front = currentVelocity.normalized;
-			}
-			// リジッドボディのベクトルをプレイヤーの立つ平面に投射したベクトル
-			else{
-				front = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized;
-			}
-			rigidbody.velocity = front * rmVal;
-			rigidbody.AddForce(currentVelocity);
-
-			// 力を加えた新たなリジッドボディの移動量
-			rmVal = rigidbody.GetSpeed();
+			GrgrAddForce(currentVelocity);
 		}
 
 		// ギアの設定
 		{
 			// ギアの段階による速度制限
-			switch(gear){
-				case Gear.First: rigidbody.velocity = rigidbody.velocity.normalized * Mathf.Min(rmVal, gearSecondBase + 1.0f); break;
-				case Gear.Second: rigidbody.velocity = rigidbody.velocity.normalized * Mathf.Min(rmVal, gearThirdBase + 1.0f); break;
-			}
+			GearSpeedLimit();
 
 			// ギア切り替え
-			{
-				gear = Gear.First;
-				if (rmVal >= gearSecondBase)
-					gear = Gear.Second;
-				if (rmVal >= gearThirdBase)
-					gear = Gear.Third;
-			}
+			GearChange();
 		}
 		
 		// 摩擦軽減処理
 		{
 			// 最高速度との差の比
-			float t = Mathf.Clamp(rmVal / maxSpeed, 0.0f, 1.0f);
+			float t = Mathf.Clamp(rigidbody.GetSpeed() / maxSpeed, 0.0f, 1.0f);
 			
 			// 摩擦の計算
 			double friction = UtilityMath.OutExp(t, 1.0f, minFriction, maxFriction);
 			
 			rigidbody.friction = (float)friction * animator.speed;
 		}
-
 		GrgrMove(rigidbody.velocity);
 
 		rigidbody.Update();
@@ -318,8 +391,23 @@ public class PlayerController : MonoBehaviour {
 	}
 #endregion
 
+#region 昇天
+	void Ascension(){
+		ascensionTimer -= Time.deltaTime;
+		if (ascensionTimer < 0){
+			rigidbody.isMove = false;
+			rigidbody.velocity = Vector3.zero;
+			transform.rotation = Random.rotation;
+			ascensionTimer = ASCENSION_TIME;
+			animator.SetBool("DamageDown", false);
+			state.Change(State.STOP);
+		}
+		rigidbody.Update();
+	}
+#endregion
+
 #region 衝突処理
-	void OnCollisionEnter(Collision other)
+	void OnCollisionStay(Collision other)
 	{
 		// 柱との衝突処理
 		if (other.gameObject.tag == "Piller")
@@ -336,23 +424,54 @@ public class PlayerController : MonoBehaviour {
 		}
 
 		// 敵との衝突処理
-		if (other.gameObject.tag == "Enemy")
+		if (other.collider.tag == "Enemy")
 		{
-			if (other.gameObject.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
+			// 敵吹っ飛び中
+			if (other.collider.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION){
 				return;
+			}
 
-			Vector3 impact = (other.transform.up + rigidbody.velocity.normalized) * rigidbody.GetSpeed() * 0.03f;
-			other.collider.GetComponent<EnemyController>().rigidbody.velocity = Vector3.zero;
-			other.collider.GetComponent<EnemyController>().rigidbody.AddForce(impact);
+			// バトル中に衝突
+			if (state.current == State.BATTLE){
+				// リザルト以外で当たったらバトル強制終了
+				if (BattleManager._instance.battle.current != BattleManager.Battle.SKILL_BATTLE_RESULT){
+					if (BattleManager._instance.battle.current != BattleManager.Battle.BATTLE_END)
+						BattleManager.BattleForceEnd();
+					return;
+				}
 
-			Vector3 front = Vector3.ProjectOnPlane(-impact.normalized, other.transform.up).normalized;
-			other.transform.rotation = Quaternion.LookRotation(front, other.transform.up);
-
-			other.collider.GetComponent<EnemyController>().rigidbody.isMove = true;
-			other.collider.GetComponent<Animator>().SetBool("Run", false);
-			other.collider.GetComponent<Animator>().SetTrigger("DamageDown");
-
-			GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
+				if (skillManager.result == SkillAttributeResult.WIN){
+					Vector3 impact = (other.transform.up + rigidbody.velocity.normalized) * rigidbody.GetSpeed() * 0.03f;
+					other.collider.GetComponent<EnemyController>().rigidbody.velocity = Vector3.zero;
+					other.collider.GetComponent<EnemyController>().rigidbody.AddForce(impact);
+					Vector3 front = Vector3.ProjectOnPlane(-impact.normalized, other.transform.up).normalized;
+					other.transform.rotation = Quaternion.LookRotation(front, other.transform.up);
+					other.collider.GetComponent<EnemyController>().rigidbody.isMove = true;
+					other.collider.GetComponent<Animator>().SetBool("Run", false);
+					other.collider.GetComponent<Animator>().SetBool("DamageDown", true);
+					GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
+				}
+				else if (skillManager.result == SkillAttributeResult.LOSE){
+					Vector3 impact = (transform.up - transform.forward) * GameData.GetEnemy().GetComponent<EnemyController>().speed * 0.03f;
+					rigidbody.velocity = Vector3.zero;
+					rigidbody.AddForce(impact);
+					rigidbody.isMove = true;
+					animator.SetBool("Run", false);
+					animator.SetBool("DamageDown", true);
+					state.Change(State.ASCENSION);
+				}
+				else{
+					state.Change(State.FLICK_MOVE);
+					GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.MOVE);
+				}
+				GameData.GetBattleManager().GetComponent<BattleManager>().skillBattleResultEnd = true;
+			}
+			// バトル外で衝突
+			else{
+				// other.collider.GetComponent<Animator>().SetBool("Run", false);
+				// other.collider.GetComponent<Animator>().SetBool("DamageDown", true);
+				// GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
+			}
 		}
 	}
 #endregion
@@ -383,5 +502,27 @@ public class PlayerController : MonoBehaviour {
 		}
 		return (TouchController.GetTouchTimer() > MOVE_TOUCH_STOP_TIME);
 	}
+#endregion
+
+#region ギア
+
+	// ギアの段階による速度制限
+	void GearSpeedLimit(){
+		switch(gear){
+			case Gear.First: rigidbody.velocity = rigidbody.velocity.normalized * Mathf.Min(rigidbody.GetSpeed(), gearSecondBase + 1.0f); break;
+			case Gear.Second: rigidbody.velocity = rigidbody.velocity.normalized * Mathf.Min(rigidbody.GetSpeed(), gearThirdBase + 1.0f); break;
+		}
+	}
+			
+	// ギアの切り替え
+	void GearChange(){
+		float speed = rigidbody.GetSpeed();
+		gear = Gear.First;
+		if (speed >= gearSecondBase)
+			gear = Gear.Second;
+		if (speed >= gearThirdBase)
+			gear = Gear.Third;
+	}
+	
 #endregion
 }

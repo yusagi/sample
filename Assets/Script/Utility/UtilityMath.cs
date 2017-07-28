@@ -9,6 +9,8 @@ public class UtilityMath
 	public enum EaseType{
 		IN_SINE,
 		LINEAR,
+		IN_CUBIC,
+		OUT_QUART,
 	}
 
 	// 移動量からアングルを返す
@@ -294,7 +296,7 @@ public class UtilityMath
 		while(t < 1.0f){
 			t = Time.deltaTime / time + t;
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
-			float result = Mathf.Lerp(st, en, et);
+			float result = Mathf.LerpAngle(st, en, et);
 			yield return (t >= 1.0f) ? end : result;
 		}
 	}
@@ -325,12 +327,27 @@ public class UtilityMath
 		}
 	}
 
-	private static double GetEasing(EaseType type, double t,double totaltime,double max ,double min ,double s = 1.0f){
+	// 2つのベクトルの内積の角度を0~360の範囲で返す
+	public static float GetAngleUnlimit(Vector3 baseVel, Vector3 baseUp, Vector3 vel){
+		float angle = Mathf.Acos(Vector3.Dot(baseVel, vel)) * Mathf.Rad2Deg;
+		
+		Vector3 up = Vector3.Cross(baseVel, vel).normalized;
+		float dot = Vector3.Dot(baseUp, up);
+		if (dot < 0){
+			angle = 360 - angle;
+		}
+
+		return angle;
+	}
+
+	public static double GetEasing(EaseType type, double t,double totaltime,double max ,double min ,double s = 1.0f){
 		double result = 0.0f;
 
 		switch(type){
 			case EaseType.IN_SINE: result = InSine(t, totaltime, max, min); break;
 			case EaseType.LINEAR: result = Linear(t, totaltime, max, min); break;
+			case EaseType.IN_CUBIC: result = InCubic(t, totaltime, max, min); break;
+			case EaseType.OUT_QUART: result = OutQuart(t, totaltime, max, min); break;
 		}
 
 		return result;

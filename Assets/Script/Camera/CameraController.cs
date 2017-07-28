@@ -11,6 +11,13 @@ public class CameraController : MonoBehaviour {
 		NORMAL,
 		PULL,
 		BATTLE,
+		LOOKAT,
+	}
+
+	// プレイヤー進行方向
+	enum DirType{
+		FRONT,
+		BACK,
 	}
 
 #endregion
@@ -18,15 +25,13 @@ public class CameraController : MonoBehaviour {
 #region メンバ変数
 
 	public Vector3 offsetPos{get;set;}
-	public float offsetVerticalAngle{get; set;}
-	public float offsetHorizontalAngle{get;set;}
+	public float offsetVAngle{get; set;}
+	public float offsetHAngle{get;set;}
+
 	public float dragSpeed = 8.0f;
 	public float DRAG_PERMISSION = 10.0f;
 	
-	private Vector3 baseFront;
-	private Vector3 baseRight;
 	private Quaternion baseRotate;
-	private Quaternion horizontalRotate = Quaternion.identity;
 
 	public Phase<CameraPhase> phase = new Phase<CameraPhase>();
 
@@ -34,18 +39,30 @@ public class CameraController : MonoBehaviour {
 	private IEnumerator<float> vRotate;
 	private IEnumerator<Vector3> osPos;
 
+	// 通常カメラ
 	public Vector3 NORMAL_OFFSET_POS = new Vector3(0, 3.4f, -7);
 	public float NORMAL_OFFSET_V_ANGLE = 16.5f;
+	public Vector3 NORMAL_OFFSET_BACK_POS = new Vector3(0, 3.4f, -18);
+	public float NORMAL_OFFSET_BACK_V_ANGLE = 16.5f;
 
-	public float PULL_OFFSET_POS_Z = -28;
+	// 見下ろしカメラ
+	public Vector3 PULL_OFFSET_POS = new Vector3(0, 3.4f, -28);
 	public float PULL_OFFSET_V_ANGLE = 31;
 
-	public float BATTLE_OFFSET_POS_Z = 50;
-	public float BATTLE_OFFSET_V_ANGLE = 0;
+	// バトルカメラ
+	public Vector3 BATTLE_OFFSET_POS;
+	public float BATTLE_OFFSET_V_ANGLE;
 	public float BATTLE_AREA_ANGLE = 30;
-	public float BATTLE_ENCOUNT_TIMER = 1;
+
+	// 注目カメラ
+	public Vector3 LOOKAT_OFFSET_POS;
+	public float LOOKAT_OFFSET_V_ANGLE;
 
 	public bool battleCameraControlleComp{get;set;}
+
+	private DirType dirType;
+
+	public bool DBG_IS_NORMAL_FRONTONLY = false;
 
 #endregion
 
@@ -53,14 +70,18 @@ public class CameraController : MonoBehaviour {
 #region Unity関数
 
 	void Awake(){
-		baseFront = GameData.GetPlayer().forward;
 		baseRotate = GameData.GetPlayer().rotation;
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, NORMAL_OFFSET_V_ANGLE);
+		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, NORMAL_OFFSET_V_ANGLE);
 		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, NORMAL_OFFSET_POS);
 
 		phase.Change(CameraPhase.NORMAL);
+		
+		offsetHAngle = 0.0f;
+		offsetVAngle = NORMAL_OFFSET_V_ANGLE;
+		offsetPos = NORMAL_OFFSET_POS;
+		dirType = DirType.FRONT;
 
-		hRotate = FLerp(offsetHorizontalAngle, offsetHorizontalAngle);
+		hRotate = FLerp(offsetHAngle, offsetHAngle);
 		while(hRotate.MoveNext());
 		vRotate = FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
 		while(vRotate.MoveNext());
@@ -69,11 +90,6 @@ public class CameraController : MonoBehaviour {
 	}
 	// Use this for initialization
 	void Start () {
-		// Vector3 result;
-		// Vector3 rUp = Quaternion.AngleAxis(r, Vector3.forward) * Quaternion.AngleAxis(f, Vector3.right) * Vector3.up;
-		// result = Vector3.ProjectOnPlane(Vector3.forward, rUp);
-		// Debug.Log("result " + result);
-		// Debug.Log("rUp " + rUp);
 	}
 	
 	// Update is called once per frame
@@ -87,78 +103,161 @@ public class CameraController : MonoBehaviour {
 		switch(phase.current){
 			// 通常
 			case CameraPhase.NORMAL: {
+				DirType current = CheckDirType();
+	
+	if (DBG_IS_NORMAL_FRONTONLY){
+		current = DirType.FRONT;
+	}
+				float vAngle = 0.0f;
+				Vector3 offset = Vector3.zero;
+				// プレイヤー進行方向
+				switch(current){
+					case DirType.FRONT: offset = NORMAL_OFFSET_POS; vAngle = NORMAL_OFFSET_V_ANGLE; break;
+					case DirType.BACK: offset = NORMAL_OFFSET_BACK_POS; vAngle = NORMAL_OFFSET_BACK_V_ANGLE; break;
+					default: Debug.LogError("out of ragne DirType"); break;
+				}
 				if (phase.IsFirst()){
 					GameData.GetPlayer().GetComponent<Animator>().speed = 1f;
 					GameData.GetEnemy().GetComponent<Animator>().speed = 1f;
 					
-					Vector3 up = baseRotate * Vector3.up; //(GameData.GetPlayer().rotation * Vector3.up).normalized;
-					Vector3 up2 = Vector3.ProjectOnPlane(transform.up, (baseRotate * Vector3.right)).normalized;
-					float vAngle = Mathf.Acos(Vector3.Dot(up, up2)) * Mathf.Rad2Deg;
-					
-					vRotate = FLerp(vAngle, NORMAL_OFFSET_V_ANGLE);
-					osPos = VLerp(osPos.Current, NORMAL_OFFSET_POS);
+					vRotate = FLerp(offsetVAngle, vAngle);
+					osPos = VLerp(offsetPos, offset);
 				}
-				NormalCamera();
+				else if (current != dirType){
+					vRotate = FLerp(offsetVAngle, vAngle);
+					osPos = VLerp(offsetPos, offset);
+					dirType = current;
+				}
+				NormalCamera(offset);
+
+				if (Input.GetKeyDown(KeyCode.Space)){
+					//phase.Change(CameraPhase.LOOKAT);
+					//return;
+				}
 			}
 			break;
 			// 見下ろしカメラ
 			case CameraPhase.PULL:{
 				if (phase.IsFirst()){
-					float anmSpeed = 1.0f;
-					//if (isSlow)
-					 anmSpeed = 0.3f;
+					float anmSpeed = 0.3f;
 					GameData.GetPlayer().GetComponent<Animator>().speed = anmSpeed;
 					GameData.GetEnemy().GetComponent<Animator>().speed =  anmSpeed;
-					vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
-					osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
+					vRotate = FLerp(offsetVAngle, PULL_OFFSET_V_ANGLE);
+					osPos = VLerp(offsetPos, PULL_OFFSET_POS);
 				}
 				PullCamera();
 				// 通常カメラ条件
-				if (!IsChangePullCamera()){
+				if (!IsInPullCameraFramework()){
 					phase.Change(CameraPhase.NORMAL);
+				}
+			}
+			break;
+			// 注目
+			case CameraPhase.LOOKAT:{
+				if (phase.IsFirst()){
+					vRotate = UtilityMath.FLerp(offsetVAngle, LOOKAT_OFFSET_V_ANGLE);
+					osPos = UtilityMath.VLerp(offsetPos, LOOKAT_OFFSET_POS);
+				}
+
+				Vector3 baseFront = (baseRotate * Vector3.forward);
+				Vector3 toEnemy = (GameData.GetEnemy().position - GameData.GetPlayer().position).normalized;
+				Vector3 front = Vector3.ProjectOnPlane(toEnemy, GameData.GetPlayer().up).normalized;
+				float hAngle = UtilityMath.GetAngleUnlimit(baseFront, baseRotate * Vector3.up, front);
+				if (hAngle > UtilityMath.epsilon){
+					hRotate = UtilityMath.FLerp(offsetHAngle, hAngle, 0.1f);
+				}
+				hRotate.MoveNext();
+				offsetHAngle = hRotate.Current;
+
+				offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : LOOKAT_OFFSET_V_ANGLE; 
+				offsetPos = (osPos.MoveNext()) ? osPos.Current : LOOKAT_OFFSET_POS;
+				SetPose();
+
+				if (Input.GetKeyDown(KeyCode.Space)){
+					phase.Change(CameraPhase.NORMAL);
+					return;
 				}
 			}
 			break;
 			// バトルモード
 			case CameraPhase.BATTLE:{
 				if (phase.IsFirst()){
-					vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
-					osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
+					float vAngle = 0.0f;
+					Vector3 offset = Vector3.zero;
+					// デバグ：バトルモード時のカメラタイプをインスペクタから変更
+					switch(BattleManager._instance.DBG_BATTLE_CAMERA_TYPE){
+						// NORMAL
+						case BattleManager.DBGCameraType.NORMAL:{
+							switch(dirType){
+								case DirType.FRONT: offset = NORMAL_OFFSET_POS; vAngle = NORMAL_OFFSET_V_ANGLE; break;
+								case DirType.BACK: offset = NORMAL_OFFSET_BACK_POS; vAngle = NORMAL_OFFSET_BACK_V_ANGLE; break;
+								default: Debug.LogError("out of ragne DirType"); break;
+							}
+						}
+						break;
+						// PULL
+						case BattleManager.DBGCameraType.PULL:{
+							vAngle = PULL_OFFSET_V_ANGLE;
+							offset = PULL_OFFSET_POS;
+						}
+						break;
+						// LOOKAT
+						case BattleManager.DBGCameraType.LOOKAT:{
+							vAngle = LOOKAT_OFFSET_V_ANGLE;
+							offset = LOOKAT_OFFSET_POS;
+						}
+						break;
+						// STOP
+						case BattleManager.DBGCameraType.STOP:{
+							vAngle = offsetVAngle;
+							offset = offsetPos;
+						}
+						break;
+						default: Debug.LogError("out of ragne DBGCameraType"); break;
+					}
+					BATTLE_OFFSET_V_ANGLE = vAngle;
+					BATTLE_OFFSET_POS = offset;
+					vRotate = FLerp(offsetVAngle, BATTLE_OFFSET_V_ANGLE);
+					osPos = VLerp(osPos.Current, BATTLE_OFFSET_POS);
 				}
-				switch(BattleManager.battle.current){
-					case BattleManager.Battle.BATTLE_START:{
+				// バトルモード状態
+				switch(BattleManager._instance.battle.current){
+					// バトル結果
+					case BattleManager.Battle.SKILL_BATTLE_RESULT:{
+						if(!BattleManager._instance.DBG_IS_SKILLBATTLE_RESULT_STOP){
+							if (BattleManager._instance.DBG_BATTLE_CAMERA_TYPE == BattleManager.DBGCameraType.LOOKAT){
+								Vector3 baseFront = (baseRotate * Vector3.forward);
+								Vector3 toEnemy = (GameData.GetEnemy().position - GameData.GetPlayer().position).normalized;
+								Vector3 front = Vector3.ProjectOnPlane(toEnemy, GameData.GetPlayer().up).normalized;
+								float hAngle = UtilityMath.GetAngleUnlimit(baseFront, baseRotate * Vector3.up, front);
+								if (hAngle > UtilityMath.epsilon){
+									hRotate = UtilityMath.FLerp(offsetHAngle, hAngle, 0.1f);
+								}
+								hRotate.MoveNext();
+								offsetHAngle = hRotate.Current;
+							}
+							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : BATTLE_OFFSET_V_ANGLE;
+							offsetPos = osPos.MoveNext() ? osPos.Current : BATTLE_OFFSET_POS;
+							SetPose();
+						}
 					}
 					break;
-					// カメラ制御
-					case BattleManager.Battle.BATTLE_CAMERA:{
-						if (BattleManager.battle.IsFirst()){
-							vRotate = FLerp(vRotate.Current, PULL_OFFSET_V_ANGLE);
-							osPos = VLerp(osPos.Current, new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z));
-							battleCameraControlleComp = false;
+					// バトル終了
+					case BattleManager.Battle.BATTLE_END:{
+						if(BattleManager._instance.battle.IsFirst()){
+							phase.Change(CameraPhase.NORMAL);
 						}
-
-						if (BattleCamera()){
-							battleCameraControlleComp = true;
-						}
-					} 
-					break;
-					// スキルバトル終了
-					case BattleManager.Battle.SKILL_BATTLE_END:{
-						// 縦回転
-						offsetVerticalAngle = vRotate.Current;
-						
-						// 回転
-						transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
-						
-						// offset
-						offsetPos = osPos.Current;
-
-						// 座標
-						transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
 					}
 					break;
 					default:{
-						BattleCamera();
+						bool tmpVRotate = vRotate.MoveNext();
+						bool tmposPos = osPos.MoveNext();
+
+						if (!BattleManager._instance.DBG_IS_CAMERA_STOP || (tmpVRotate && tmposPos)){
+							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : BATTLE_OFFSET_V_ANGLE;
+							offsetPos = osPos.MoveNext() ? osPos.Current : BATTLE_OFFSET_POS;
+							SetPose();
+						}
 					}	
 					break;
 				}
@@ -192,76 +291,65 @@ public class CameraController : MonoBehaviour {
 		return drag * Time.deltaTime * dragSpeed;
 	}
 
+	// プレイヤーの進行方向確認
+	DirType CheckDirType(){
+		Vector3 vel = GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.velocity;
+		if (vel.magnitude < UtilityMath.epsilon){
+			return DirType.FRONT;
+		}
+
+		float dot = Vector3.Dot(Vector3.ProjectOnPlane(vel, transform.up).normalized, transform.forward);
+
+		if (dot > 0){
+			return DirType.FRONT;
+		}
+		else
+			return DirType.BACK;
+	}
+
 	// プレイヤーの動きに並行して付いていくカメラ
-	void NormalCamera(){
+	void NormalCamera(Vector3 offset){
 		// 横回転角度
-		offsetHorizontalAngle += DragAngle();
+		offsetHAngle += DragAngle();
 		// 角度の正規化
 		{
-			int i = (int)offsetHorizontalAngle;
-			float f = offsetHorizontalAngle - i;
-			offsetHorizontalAngle = (i % 360) + f;
-			if (offsetHorizontalAngle < 0)
-				offsetHorizontalAngle += 360;
+			int i = (int)offsetHAngle;
+			float f = offsetHAngle - i;
+			offsetHAngle = (i % 360) + f;
+			if (offsetHAngle < 0)
+				offsetHAngle += 360;
 		}
 
 		// 縦回転
-		offsetVerticalAngle = (vRotate.MoveNext()) ? vRotate.Current : NORMAL_OFFSET_V_ANGLE;
-
-		// 回転
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
+		offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : NORMAL_OFFSET_V_ANGLE;
 
 		// offset
-		offsetPos = (osPos.MoveNext()) ? osPos.Current : NORMAL_OFFSET_POS;
-		
-		// 座標設定
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
+		offsetPos = (osPos.MoveNext()) ? osPos.Current : offset;
+
+		// カメラポーズ設定
+		SetPose();
 	}
 #endregion
 
 #region 見下ろしカメラ
 	void PullCamera(){
 		// 縦回転
-		offsetHorizontalAngle = (vRotate.MoveNext()) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
-		
-		// 回転
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetHorizontalAngle);
+		offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
 		
 		// offset
-		offsetPos = (osPos.MoveNext()) ? osPos.Current : new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z);
-
-		// 座標
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
+		offsetPos = (osPos.MoveNext()) ? osPos.Current : PULL_OFFSET_POS;
+		
+		// カメラポーズ設定
+		SetPose();
 	}
 #endregion
 
-#region バトルカメラ
 
-	bool BattleCamera(){
-		bool tmp_vRot = vRotate.MoveNext();
-		bool tmp_osPos = osPos.MoveNext();
-
-		// 縦回転
-		offsetVerticalAngle = (tmp_vRot) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
-		
-		// 回転
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, offsetVerticalAngle);
-		
-		// offset
-		offsetPos = (tmp_osPos) ? osPos.Current : new Vector3(NORMAL_OFFSET_POS.x, NORMAL_OFFSET_POS.y, PULL_OFFSET_POS_Z);
-
-		// 座標
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
-
-
-		return !tmp_vRot && !tmp_osPos;
-	}
-#endregion
 
 #region コルーチン
 	// 横回転補間
 	IEnumerator<float> HorizontalRotate(float start, float end){
-		float s = start; //offsetHorizontalAngle;
+		float s = start; //offsetHAngle;
 		float e = end;// Mathf.Acos(Vector3.Dot(transform.forward, player.forward)) * Mathf.Rad2Deg;
 		float t = 0.0f;
 		Vector3 cross = Vector3.Cross(transform.forward, GameData.GetPlayer().forward).normalized + transform.up;
@@ -284,7 +372,7 @@ public class CameraController : MonoBehaviour {
 		float t = 0.0f;
 		while(t < 1.0f){
 			t = Time.deltaTime / time + t;
-			float result = Mathf.Lerp(s, e, t);
+			float result = Mathf.LerpAngle(s, e, t);
 			yield return (t >= 1.0f) ? end : result;
 		}
 	}
@@ -319,36 +407,42 @@ public class CameraController : MonoBehaviour {
 
 	// プレイヤーと並行でかつヨウ回転だけしたカメラの回転
 	public Quaternion GetHorizontalRotate(){
-		return RotateXYAxis(baseRotate, offsetHorizontalAngle, 0.0f);
+		return RotateXYAxis(baseRotate, offsetHAngle, 0.0f);
 	}
 	
-	// プレイヤーと敵の距離が一定値より近いか
-	public bool IsChangePullCamera(){
-		// if (!isPull)
-		// 	return false;
-
-		bool result = true;
-
-		Transform target = GameData.GetEnemy();
-
-		if (target.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
-			result = false;
-
+	// NormalCameraの枠内か？
+	public bool IsInNormalCameraFramework(){
 		Quaternion tmpRotate = transform.rotation;
 		Vector3 tmpPos = transform.position;
+		
+		// 基回転
+		Quaternion bRot = baseRotate;
+		// 水平アングル
+		float hAngle = offsetHAngle;
+		// 垂直アングル
+		float vAngle = 0.0f;
+		// offset座標
+		Vector3 offset = Vector3.zero;
+		switch(dirType){
+			case DirType.FRONT: offset = NORMAL_OFFSET_POS; vAngle = NORMAL_OFFSET_V_ANGLE; break;
+			case DirType.BACK: offset = NORMAL_OFFSET_BACK_POS; vAngle = NORMAL_OFFSET_BACK_V_ANGLE; break;
+			default: Debug.LogError("out of ragne DirType"); break;
+		}
 
-		transform.rotation = RotateXYAxis(baseRotate, offsetHorizontalAngle, PULL_OFFSET_V_ANGLE);
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, new Vector3(offsetPos.x, offsetPos.y, PULL_OFFSET_POS_Z));
+		// カメラポーズ設定
+		transform.rotation = RotateXYAxis(bRot, hAngle, vAngle);
+		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offset);
 
-		Vector3 t = 
-				target.position + target.up * 
-				(target.GetComponent<CapsuleCollider>().height * 0.5f * target.transform.localScale.y);
+
+		bool result = true;
+		// ターゲット座標
+		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
 		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
 		if (sPos.x < 0 || sPos.x > Screen.width)
 			result = false;
 
 		float h = 100;
-		if (sPos.y < 0 + h || sPos.y > Screen.height - h)
+		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
 			result = false;
 
 		Ray ray = Camera.main.ScreenPointToRay(sPos);
@@ -358,6 +452,9 @@ public class CameraController : MonoBehaviour {
 				result = false;
 			}
 		}
+		else{
+			result = false;
+		}
 
 		transform.rotation = tmpRotate;
 		transform.position = tmpPos;
@@ -365,12 +462,88 @@ public class CameraController : MonoBehaviour {
 		return result;
 	}
 
-	bool IsChangeBattleCamera(){
+	// PullCameraの枠内か？
+	public bool IsInPullCameraFramework(){
+		Quaternion tmpRotate = transform.rotation;
+		Vector3 tmpPos = transform.position;
+
+		bool result = true;
+		
+		// 基回転
+		Quaternion bRot = baseRotate;
+		// 水平アングル
+		float hAngle = offsetHAngle;
+		// 垂直アングル
+		float vAngle = PULL_OFFSET_V_ANGLE;
+		// 座標
+		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
+		// offset座標
+		Vector3 offset = PULL_OFFSET_POS;
+
+		// カメラポーズ設定
+		transform.rotation = RotateXYAxis(bRot, hAngle, vAngle);
+		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offset);
+
+
+
+		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
+		if (sPos.x < 0 || sPos.x > Screen.width)
+			result = false;
+
+		float h = 100;
+		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
+			result = false;
+
+		Ray ray = Camera.main.ScreenPointToRay(sPos);
+		RaycastHit hit;
+		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(Layer.PLAYER | Layer.PILLER)))){
+			if (hit.collider.tag == "Planet"){
+				result = false;
+			}
+		}
+		else{
+			result = false;
+		}
+
+		transform.rotation = tmpRotate;
+		transform.position = tmpPos;
+
+		return result;
+	}
+
+	// BattleCameraの枠内か？
+	bool IsInBattleCameraFramework(){
 		float angle = Mathf.Acos(Vector3.Dot(GameData.GetPlayer().up, GameData.GetEnemy().up)) * Mathf.Rad2Deg;
 		if (angle <= BATTLE_AREA_ANGLE){
 			return true;
 		}
 		return false;
+	}
+
+	// 現在のカメラの枠内か？
+	public bool IsInCameraFramework(){
+		bool result = true;
+		// ターゲット座標
+		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
+		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
+		if (sPos.x < 0 || sPos.x > Screen.width)
+			result = false;
+
+		float h = 100;
+		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
+			result = false;
+
+		Ray ray = Camera.main.ScreenPointToRay(sPos);
+		RaycastHit hit;
+		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(Layer.PLAYER | Layer.PILLER)))){
+			if (hit.collider.tag == "Planet"){
+				result = false;
+			}
+		}
+		else{
+			result = false;
+		}
+		return result;
 	}
 
 	// rotateの体勢で上方向がupと並行になる回転を取得
@@ -400,6 +573,15 @@ public class CameraController : MonoBehaviour {
 			(rotate * Vector3.forward).normalized * offset.z;
 
 		return position;
+	}
+
+	// カメラ回転、座標設定
+	void SetPose(){
+		// 回転
+		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, offsetVAngle);
+		
+		// 座標設定
+		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
 	}
 
 #endregion
