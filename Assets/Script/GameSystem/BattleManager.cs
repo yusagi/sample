@@ -43,13 +43,6 @@ public class BattleManager : MonoBehaviour {
 		STOP,
 	}
 
-	public enum SlowType{
-		LINER,
-		LINER2,
-		IN_CUBIC,
-		OUT_QUART,
-	}
-
 #endregion
 
 #region メンバ変数
@@ -78,7 +71,7 @@ public class BattleManager : MonoBehaviour {
 	public float SLOW_START2 = 1f;
 	public float SLOW_END2 = 0.01f;
 
-	public SlowType slowType = SlowType.LINER;
+	public EaseType slowType = EaseType.LINEAR;
 
 	// デバグ
 	public float DBG_SKILLBATTLE_PLAY_TIME = 1.0f;

@@ -2,37 +2,54 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+	public enum EaseType{
+		IN_QUAD,
+		OUT_QUAD,
+		INOUT_QUAD,
+		IN_CUBIC,
+		OUT_CUBIC,
+		INOUT_CUBIC,
+		IN_QUART,
+		OUT_QUART,
+		INOUT_QUART,
+		IN_QUINT,
+		OUT_QUINT,
+		INOUT_QUINT,
+		IN_SINE,
+		OUT_SINE,
+		INOUT_SINE,
+		IN_EXP,
+		OUT_EXP,
+		INOUT_EXP,
+		IN_CIRC,
+		OUT_CIRC,
+		INOUT_CIRC,
+		IN_BACK,
+		OUT_BACK,
+		INOUT_BACK,
+		IN_BOUNCE,
+		OUT_BOUNCE,
+		INOUT_BOUNCE,
+		LINEAR,
+		LINEAR2,
+	}
+	
 public class UtilityMath
 {
 	public static float epsilon = 0.009f;
 
-	public enum EaseType{
-		IN_SINE,
-		LINEAR,
-		IN_CUBIC,
-		OUT_QUART,
-	}
-
-	// 移動量からアングルを返す
-	public static float LenToAngle(float length, float radius){
-		return (length / (2*Mathf.PI*radius)) * 360.0f;
-	}
-
 	//イージング関数
-	public static double InQuad(double t,double totaltime,double max ,double min )
-	{
+	public static double InQuad(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return max*t*t + min;
 	}
-	public static double OutQuad(double t,double totaltime,double max ,double min )
-	{
+	public static double OutQuad(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return -max*t*(t-2)+min;
 	}
-	public static double InOutQuad(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutQuad(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		if( t / 2 < 1 )
@@ -40,20 +57,17 @@ public class UtilityMath
 		--t;
 		return -max * (t * (t-2)-1) + min;
 	}
-	public static double InCubic(double t,double totaltime,double max ,double min )
-	{
+	public static double InCubic(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return max * t*t*t + min;
 	}
-	public static double OutCubic(double t,double totaltime,double max ,double min )
-	{
+	public static double OutCubic(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t = t/totaltime-1;
 		return max * (t*t*t+1) + min;
 	}
-	public static double InOutCubic(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutCubic(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		if( t/2 < 1 )
@@ -61,20 +75,17 @@ public class UtilityMath
 		t -= 2;
 		return max/2 * (t*t*t+2) + min;
 	}
-	public static double InQuart(double t,double totaltime,double max ,double min )
-	{
+	public static double InQuart(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return max * t*t*t*t + min;
 	}
-	public static double OutQuart(double t,double totaltime,double max ,double min )
-	{
+	public static double OutQuart(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t = t/totaltime-1;
 		return -max*( t*t*t*t-1) +min;
 	}
-	public static double InOutQuart(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutQuart(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		if( t/2 < 1 )
@@ -82,20 +93,17 @@ public class UtilityMath
 		t -= 2;
 		return -max/2 * (t*t*t*t-2) + min;
 	}
-	public static double InQuint(double t,double totaltime,double max ,double min )
-	{
+	public static double InQuint(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return max*t*t*t*t*t + min;
 	}
-	public static double OutQuint(double t,double totaltime,double max ,double min )
-	{
+	public static double OutQuint(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t = t/totaltime-1;
 		return max*(t*t*t*t*t+1)+min;
 	}
-	public static double InOutQuint(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutQuint(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		if( t/2 < 1 )
@@ -103,33 +111,27 @@ public class UtilityMath
 		t -= 2;
 		return max/2 * (t*t*t*t*t+2) + min;
 	}
-	public static double InSine(double t,double totaltime,double max ,double min )
-	{
+	public static double InSine(double t,double totaltime,double max ,double min ){
 		max -= min;
 		return -max*Mathf.Cos( (float)(t*(Mathf.Deg2Rad * 90.0f) / totaltime) ) + max + min;
 	}
-	// double OutSine(double t,double totaltime,double max ,double min )
-	// {
-	// 	max -= min;
-	// 	return max * sin( t*Rad90/totaltime ) + min;
-	// }
-	public static double InOutSine(double t,double totaltime,double max ,double min )
-	{
+	public static double OutSine(double t,double totaltime,double max ,double min ){
+		max -= min;
+		return max * Mathf.Sin( (float)(t*(Mathf.Deg2Rad * 90.0f)/totaltime) ) + min;
+	}
+	public static double InOutSine(double t,double totaltime,double max ,double min ){
 		max -= min;
 		return -max/2* (Mathf.Cos((float)(t * Mathf.PI / totaltime))-1) + min;
 	}
-	public static double InExp(double t,double totaltime,double max ,double min )
-	{
+	public static double InExp(double t,double totaltime,double max ,double min ){
 		max -= min;
 		return t == 0.0 ? min : max*Mathf.Pow(2,(float)(10*(t/totaltime-1))) + min;
 	}
-	public static double OutExp(double t,double totaltime,double max ,double min )
-	{
+	public static double OutExp(double t,double totaltime,double max ,double min ){
 		max -= min;
 		return t == totaltime ? max + min : max*(-Mathf.Pow(2,(float)(-10*t/totaltime))+1)+min;
 	}
-	public static double InOutExp(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutExp(double t,double totaltime,double max ,double min ){
 		if( t == 0.0 )
 			return min;
 		if( t == totaltime )
@@ -143,20 +145,17 @@ public class UtilityMath
 		return max/2*(-Mathf.Pow(2,(float)(-10*t))+2) + min;
 
 	}
-	public static double InCirc(double t,double totaltime,double max ,double min )
-	{
+	public static double InCirc(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		return -max*(Mathf.Sqrt((float)(1-t*t))-1)+min;
 	}
-	public static double OutCirc(double t,double totaltime,double max ,double min )
-	{
+	public static double OutCirc(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t = t/totaltime-1;
 		return max*Mathf.Sqrt( (float)(1-t*t))+min;
 	}
-	public static double InOutCirc(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutCirc(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 		if( t/2 < 1 )
@@ -164,20 +163,17 @@ public class UtilityMath
 		t -= 2;
 		return max/2 * (Mathf.Sqrt((float)(1-t*t))+1) + min;
 	}
-	public static double InBack(double t,double totaltime,double max ,double min ,double s )
-	{
+	public static double InBack(double t,double totaltime,double max ,double min ,double s ){
 		max -= min;
 		t /= totaltime;
 		return max*t*t*( (s + 1)*t - s) + min;
 	}
-	public static double OutBack(double t,double totaltime,double max ,double min ,double s )
-	{
+	public static double OutBack(double t,double totaltime,double max ,double min ,double s ){
 		max -= min;
 		t = t/totaltime-1;
 		return max*(t*t*((s+1)*t*s)+1)+min;
 	}
-	public static double InOutBack(double t,double totaltime,double max ,double min ,double s )
-	{
+	public static double InOutBack(double t,double totaltime,double max ,double min ,double s ){
 		max -= min;
 		s *= 1.525;
 		if( t/2 < 1 )
@@ -187,8 +183,7 @@ public class UtilityMath
 		t -= 2;
 		return max/2 * (t*t*((s+1)*t+s)+2) + min;
 	}
-	public static double OutBounce(double t,double totaltime,double max ,double min )
-	{
+	public static double OutBounce(double t,double totaltime,double max ,double min ){
 		max -= min;
 		t /= totaltime;
 
@@ -210,20 +205,23 @@ public class UtilityMath
 			return max*(7.5625*t*t+0.984375) + min;
 		}
 	}
-	public static double InBounce(double t,double totaltime,double max ,double min )
-	{
+	public static double InBounce(double t,double totaltime,double max ,double min ){
 		return max - OutBounce( totaltime - t , totaltime , max - min , 0 ) + min;  
 	}
-	public static double InOutBounce(double t,double totaltime,double max ,double min )
-	{
+	public static double InOutBounce(double t,double totaltime,double max ,double min ){
 		if( t < totaltime/2 )
 			return InBounce( t*2 , totaltime , max-min , max )*0.5 + min;
 		else
 			return OutBounce(t*2-totaltime,totaltime,max-min,0)*0.5+min + (max-min)*0.5;
 	}
-	public static double Linear(double t,double totaltime,double max ,double min )
-	{
+	public static double Linear(double t,double totaltime,double max ,double min ){
 		return (max-min)*t/totaltime + min;
+	}
+
+
+	// 移動量からアングルを返す
+	public static float LenToAngle(float length, float radius){
+		return (length / (2*Mathf.PI*radius)) * 360.0f;
 	}
 
 	// S1(s) = p1 + s*(q1 - p1) および S2(t) = p2 + t*(q2 - p2)の
@@ -339,15 +337,39 @@ public class UtilityMath
 
 		return angle;
 	}
-
+//
 	public static double GetEasing(EaseType type, double t,double totaltime,double max ,double min ,double s = 1.0f){
 		double result = 0.0f;
 
 		switch(type){
-			case EaseType.IN_SINE: result = InSine(t, totaltime, max, min); break;
-			case EaseType.LINEAR: result = Linear(t, totaltime, max, min); break;
+			case EaseType.IN_QUAD: result = InQuad(t, totaltime, max, min); break;
+			case EaseType.OUT_QUAD: result = OutQuad(t, totaltime, max, min); break;
+			case EaseType.INOUT_QUAD: result = InOutQuad(t, totaltime, max, min); break;
 			case EaseType.IN_CUBIC: result = InCubic(t, totaltime, max, min); break;
+			case EaseType.OUT_CUBIC: result = OutCubic(t, totaltime, max, min); break;
+			case EaseType.INOUT_CUBIC: result = InOutCubic(t, totaltime, max, min); break;
+			case EaseType.IN_QUART: result = InQuart(t, totaltime, max, min); break;
 			case EaseType.OUT_QUART: result = OutQuart(t, totaltime, max, min); break;
+			case EaseType.INOUT_QUART: result = InOutQuart(t, totaltime, max, min); break;
+			case EaseType.IN_QUINT: result = InQuint(t, totaltime, max, min); break;
+			case EaseType.OUT_QUINT: result = OutQuint(t, totaltime, max, min); break;
+			case EaseType.INOUT_QUINT: result = InOutQuint(t, totaltime, max, min); break;
+			case EaseType.IN_SINE: result = InSine(t, totaltime, max, min); break;
+			case EaseType.OUT_SINE: result = OutSine(t, totaltime, max, min); break;
+			case EaseType.INOUT_SINE: result = InOutSine(t, totaltime, max, min); break;
+			case EaseType.IN_EXP: result = InExp(t, totaltime, max, min); break;
+			case EaseType.OUT_EXP: result = OutExp(t, totaltime, max, min); break;
+			case EaseType.INOUT_EXP: result = InOutExp(t, totaltime, max, min); break;
+			case EaseType.IN_CIRC: result = InCirc(t, totaltime, max, min); break;
+			case EaseType.OUT_CIRC: result = OutCirc(t, totaltime, max, min); break;
+			case EaseType.INOUT_CIRC: result = InOutCirc(t, totaltime, max, min); break;
+			case EaseType.IN_BACK: result = InBack(t, totaltime, max, min, s); break;
+			case EaseType.OUT_BACK: result = OutBack(t, totaltime, max, min, s); break;
+			case EaseType.INOUT_BACK: result = InOutBack(t, totaltime ,max, min, s); break;
+			case EaseType.IN_BOUNCE: result = InBounce(t, totaltime, max, min); break;
+			case EaseType.OUT_BOUNCE: result = OutBounce(t, totaltime, max, min); break;
+			case EaseType.INOUT_BOUNCE: result = InOutBounce(t, totaltime, max, min); break;
+			case EaseType.LINEAR: result = Linear(t, totaltime, max, min); break;
 		}
 
 		return result;

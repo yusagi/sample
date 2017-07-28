@@ -219,25 +219,7 @@ public class PlayerController : MonoBehaviour {
 					default:{
 						float time = (BattleManager._instance.SLOW_TOTAL_TIME - BattleManager._instance.slowTimer);
 						switch(BattleManager._instance.slowType){
-							case BattleManager.SlowType.LINER:{
-								float start = BattleManager._instance.SLOW_START;
-								float end = BattleManager._instance.SLOW_END;
-								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.LINEAR, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
-							}
-							break;
-							case BattleManager.SlowType.IN_CUBIC:{
-								float start = BattleManager._instance.SLOW_START;
-								float end = BattleManager._instance.SLOW_END;
-								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.IN_CUBIC, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
-							}
-							break;
-							case BattleManager.SlowType.OUT_QUART:{
-								float start = BattleManager._instance.SLOW_START;
-								float end = BattleManager._instance.SLOW_END;
-								animator.speed = (float)UtilityMath.GetEasing(UtilityMath.EaseType.OUT_QUART, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
-							}
-							break;
-							case BattleManager.SlowType.LINER2:{
+							case EaseType.LINEAR2:{
 								float t;
 								float start;
 								float end;
@@ -258,6 +240,12 @@ public class PlayerController : MonoBehaviour {
 								animator.speed = (float)UtilityMath.Linear(t, totalTime, end, start);
 							}
 							break;
+							default:{
+								float start = BattleManager._instance.SLOW_START;
+								float end = BattleManager._instance.SLOW_END;
+								animator.speed = (float)UtilityMath.GetEasing(BattleManager._instance.slowType, time, BattleManager._instance.SLOW_TOTAL_TIME, end, start);
+							}
+							break;
 						}
 						FlickMove();
 					}
@@ -268,7 +256,7 @@ public class PlayerController : MonoBehaviour {
 		}
 		state.Update();
 
-		curS.text = (int)(rigidbody.GetSpeed() * 1) + "km";
+		curS.text = (int)(rigidbody.GetSpeed() * 3.6f) + "km";
 	}
 
 	
