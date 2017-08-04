@@ -207,7 +207,7 @@ public class BattleManager : MonoBehaviour {
 				if (skillBattleStartEnd){
 					BattleBoardData.skillChoiceBoard.SetActive(false);
 					skillBattleStartEnd = false;
-					battle.Change(Battle.SKILL_BATTLE_PLAY);
+					battle.Change(Battle.BATTLE_END);
 					battle.Start();
 					return;
 				}

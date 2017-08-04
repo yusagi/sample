@@ -517,7 +517,7 @@ public class PlayerController : MonoBehaviour {
 						state.Change(State.ASCENSION);
 					}
 					else{
-						animator.m_Animator.Play("Idle");
+						//animator.m_Animator.Play("Idle");
 						state.Change(State.FLICK_MOVE);
 					}
 				}
