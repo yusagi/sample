@@ -34,33 +34,34 @@ public class PlayerController : MonoBehaviour {
 	public float gearSecondBase = 30.0f;	// ギア2突入条件値
 	public float gearThirdBase = 40.0f;		// ギア3突入条件値
 	public float gearFirstAccele = 20.0f;	// ギア1加速度	
-	public float gearSecondAccele = 2.0f;	// ギア2加速度
-	public float gearThirdAccele = 0.8f;	// ギア3加速度
+	public float gearSecondAccele = 5.0f;	// ギア2加速度
+	public float gearThirdAccele = 2.0f;	// ギア3加速度
 	public float maxSpeed = 50.0f;			// 最高速度
-	public float resultSpeed = 10.0f;
 	public Vector3 currentVelocity{get;set;}	// 最新フレームのフリック移動量
 	// ビタ止め
 	public float MOVE_FRICK_STOP_ANGLE = 0;	// フリックビタ止め条件値
 	public float MOVE_TOUCH_STOP_TIME = 1;	// タッチビタ止め条件値
-	// コンポーネント
-	public AnimatorChecker animator;			// アニメーター
+    // 地上からの高さ調整
+    public float HEIGHT_FROM_GROUND = -0.6f;
+    // HP
+    public int hp = 100;
+    // UI
+    public Text curS;   // 速度
+    // コンポーネント
+    public AnimatorChecker animator { get; set; }// アニメーター
 	// 付属クラス
-	public Rigidbody_grgr rigidbody;
+	public Rigidbody_grgr rigidbody { get; set; }
 	public SkillManager skillManager{get;set;}
 	// 状態
 	public Phase<State> state = new Phase<State>();
-	private Gear gear;	// ギア
-	// UI
-	public Text curS;	// 速度
-	// 地上からの高さ調整
-	public float HEIGHT_FROM_GROUND = -0.6f;
-	// 敵との衝突フラグ
-	public bool isEnemyCollision{get;set;}
-	// ASCENSION用
-	private float ascensionTimer = 0;
+	private Gear gear;  // ギア
+	public TouchController.TouchType touchType{get;set;}
+    // フラグ
+    public bool isActionStart { get; set; }      // ジャンプバトル開始
+    public bool isAction { get; set; }           // ジャンプバトル中
+    // ASCENSION用
+    private float ascensionTimer = 0;
 	private float ASCENSION_TIME = 3.0f;
-	// HP
-	public int hp = 100;
 	// AP
 	public float ap{get;set;}
 	// コルーチン
@@ -82,12 +83,16 @@ public class PlayerController : MonoBehaviour {
 		rigidbody.isMove = false;
 
 		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
-
-		//animator = GetComponent<Animator>();
+        
 		animator = GetComponent<AnimatorChecker>();
 
 		gear = Gear.First;
 		state.Change(State.STOP);
+
+		touchType = TouchController.TouchType.None;
+
+        isActionStart = false;
+        isAction = false;
 
 		ascensionTimer = ASCENSION_TIME;
 	}
@@ -95,11 +100,11 @@ public class PlayerController : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 	}
-	
-	// Update is called once per frame
-	void Update () {
-		// 最大速度を変更
-		rigidbody.maxVelocitySpeed = maxSpeed;
+
+    // Update is called once per frame
+    void Update () {
+        // 最大速度を変更
+        rigidbody.maxVelocitySpeed = maxSpeed;
 
 		rigidbody.prevPosition = transform.position;
 		rigidbody.prevVelocity = rigidbody.velocity;
@@ -116,7 +121,7 @@ public class PlayerController : MonoBehaviour {
 				// ドラッグ移動条件
 				if (TouchController.GetTouchType() == TouchController.TouchType.Drag){
 					currentVelocity = DragVelocity();
-					GrgrMove(currentVelocity);
+					GrgrMove(currentVelocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 					state.Change(State.DRAG_MOVE);
 				}
 				// フリック移動条件
@@ -144,7 +149,7 @@ public class PlayerController : MonoBehaviour {
 					return;
 				}
 				
-				GrgrMove(currentVelocity);
+				GrgrMove(currentVelocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 			}
 			break;
 			// フリック移動状態
@@ -197,16 +202,15 @@ public class PlayerController : MonoBehaviour {
 #region 移動
 
 	// 球体ぐるぐる移動
-	void GrgrMove(Vector3 velocity){
+	void GrgrMove(Vector3 velocity, float jamp){
 		// 移動量を円弧とし、角度を求めて移動する
-		if (velocity.magnitude > UtilityMath.epsilon){
-			float speed = velocity.magnitude;
-			float arc = speed * Time.deltaTime * animator.m_Animator.speed;
+		if (velocity.magnitude > Vector3.kEpsilon){
+			float arc = velocity.magnitude;
 			float angle = arc / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
 			transform.rotation = Quaternion.LookRotation(velocity.normalized, transform.up);
 			transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
 		}
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
 	}
 
 	// 球体ぐるぐるrigidbody.velocity加算
@@ -251,7 +255,7 @@ public class PlayerController : MonoBehaviour {
 			
 			rigidbody.friction = (float)friction * animator.m_Animator.speed;
 		}
-		GrgrMove(rigidbody.velocity);
+		GrgrMove(rigidbody.velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 
 		rigidbody.Update();
 	}
@@ -314,6 +318,7 @@ public class PlayerController : MonoBehaviour {
 	void AscensionIni(Vector3 impact){
 		rigidbody.isMove = true;
 		rigidbody.velocity = impact;
+        animator.m_Animator.SetBool("Run", false);
 		animator.m_Animator.Play("DamageDown");
 	}
 
@@ -473,23 +478,12 @@ public class PlayerController : MonoBehaviour {
 			// スキルバトルプレイ
 			case BattleManager.Battle.SKILL_BATTLE_PLAY:{
 				if (BattleManager._instance.battle.IsFirst()){
-					// 向きを敵がわに
-					Vector3 toEnemy = (GameData.GetEnemy().position - transform.position);
-					Vector3 front = Vector3.ProjectOnPlane(toEnemy, transform.up).normalized;
-					transform.rotation = Quaternion.LookRotation(front, transform.up);
-					rigidbody.velocity = front * rigidbody.GetSpeed();
 
-					float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetEnemy().up)) * Mathf.Rad2Deg * 0.5f - 2.0f;
-					Vector3 axis = Vector3.Cross(transform.up, GameData.GetEnemy().up);
-					qLerp = UtilityMath.QLerp(transform.rotation, Quaternion.AngleAxis(angle, axis) * transform.rotation, BattleManager.SKILLBATTLE_PLAY_TIME);
+                        StartCoroutine(BattleJampPlay());
 
-					animator.m_Animator.speed = 1.0f;
-					animator.m_Animator.SetBool("Run", false);
+                        return;
 				}
-
-				qLerp.MoveNext();
-				transform.rotation = qLerp.Current;
-				GrgrMove(Vector3.zero);
+                    animator.m_Animator.speed = BattleManager._instance.slowSpeed;
 			}
 			break;
 			// スキルバトル結果
@@ -503,6 +497,8 @@ public class PlayerController : MonoBehaviour {
 			break;
 			// スキルバトル終了
 			case BattleManager.Battle.SKILL_BATTLE_END:{
+				animator.m_Animator.speed = BattleManager._instance.slowSpeed;
+				FlickMove();
 			}
 			break;
 			// バトル終了
@@ -579,5 +575,75 @@ public class PlayerController : MonoBehaviour {
 
 		GameData.GetEnemy().GetComponent<EnemyController>().hp -= damage;
 	}
+
+    // バトルプレイ中コルーチン
+    IEnumerator BattleJampPlay()
+    {
+        int count = BattleManager._instance.battlePlayflags.Count;
+        BattleManager._instance.battlePlayflags.Add(false);
+
+        // 時間
+        float time = 1.0f;
+
+        // 移動
+        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetEnemy().up)) * Mathf.Rad2Deg;
+        float arc = (2 * Mathf.PI * GameData.GetPlanet().localScale.y * 0.5f) * (angle / 360.0f);
+        Vector3 targetVel = (GameData.GetEnemy().position + GameData.GetEnemy().right) - transform.position;
+        Quaternion baseRotate = transform.rotation;
+
+        // ジャンプ
+        float height = BattleManager._instance.DBG_ACTION_JAMP;
+        float distance = Mathf.Sqrt(height);
+
+		// 止めるtを計算
+		float stop_t = 0.0f;
+		if (arc > 3.0f){
+			float x = (arc * 0.5f) - 1.5f;
+			stop_t = x / arc;
+		}
+		
+        float t = 0.0f;
+
+        while(t < 1f)
+        {
+            t += (Time.deltaTime / time) * animator.m_Animator.speed;
+            t = Mathf.Min(t, 1.0f);
+
+            // 移動
+            transform.rotation = baseRotate;
+            float val = Mathf.Lerp(0.0f, arc, t);
+            Vector3 front = Vector3.ProjectOnPlane(targetVel, transform.up).normalized;
+
+            // ジャンプ
+            float x = Mathf.Lerp(0.0f, 2*distance, t);
+            float jamp = -(Mathf.Pow(x - distance, 2)) + height;
+
+            GrgrMove(front * val, jamp);
+
+            // アクション
+            if (t > stop_t && !isAction)
+            {
+                if (!isActionStart)
+                {
+                    isActionStart = true;
+                }
+                while (!isAction)
+                {
+                    BattleResultUpdate();
+                    yield return null;
+                }
+            }
+
+            yield return null;
+        }
+
+        isActionStart = false;
+        isAction = false;
+        animator.m_Animator.Play("Idle");
+
+        rigidbody.velocity = transform.forward * rigidbody.GetSpeed();
+
+        BattleManager._instance.battlePlayflags[count] = true;
+    }
 #endregion
 }

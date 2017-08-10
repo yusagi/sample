@@ -83,7 +83,7 @@ public class EnemyController : MonoBehaviour {
 			// 移動
 			case State.MOVE:{
 				animator.m_Animator.SetBool("Run", true);
-				Move(transform.forward * speed);
+				Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 			}
 			break;
 			// 昇天
@@ -106,15 +106,15 @@ public class EnemyController : MonoBehaviour {
 
 #region 移動
 	// 移動
-	void Move(Vector3 velocity){
-		if (velocity.magnitude > UtilityMath.epsilon){
-			float length = velocity.magnitude * Time.deltaTime * animator.m_Animator.speed;
+	void Move(Vector3 velocity, float jamp){
+		if (velocity.magnitude > Vector3.kEpsilon){
+			float length = velocity.magnitude;
 			float angle = length / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
 			transform.rotation = Quaternion.LookRotation(velocity, transform.up);
 			transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
 		}
 		
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
 	}
 #endregion
 
@@ -154,28 +154,18 @@ public class EnemyController : MonoBehaviour {
 						return;
 					}
 					animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-					Move(transform.forward * speed);
+					Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 				}
 				break;
 				// スキルバトルプレイ
 				case BattleManager.Battle.SKILL_BATTLE_PLAY:{
 					if (BattleManager._instance.battle.IsFirst()){
-						// 向きを敵がわに
-						Vector3 toPlayer = (GameData.GetPlayer().position - transform.position);
-						Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
-						transform.rotation = Quaternion.LookRotation(front, transform.up);
-
-						float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetPlayer().up)) * Mathf.Rad2Deg * 0.5f - 2.0f;
-						Vector3 axis = Vector3.Cross(transform.up, GameData.GetPlayer().up);
-						qLerp = UtilityMath.QLerp(transform.rotation, Quaternion.AngleAxis(angle, axis) * transform.rotation, BattleManager.SKILLBATTLE_PLAY_TIME);
-
-						animator.m_Animator.speed = 1.0f;
-						animator.m_Animator.SetBool("Run", false);
+                        StartCoroutine(BattlePlay());
+                        return;
 					}
 
-					qLerp.MoveNext();
-					transform.rotation = qLerp.Current;
-					Move(Vector3.zero);
+                    animator.m_Animator.speed = BattleManager._instance.slowSpeed;
+                    //Move(transform.forward * speed);
 				}
 				break;
 				// スキルバトル結果
@@ -185,6 +175,12 @@ public class EnemyController : MonoBehaviour {
 						return;
 					}
 					BattleResultUpdate();
+				}
+				break;
+				// スキルバトル終了
+				case BattleManager.Battle.SKILL_BATTLE_END:{
+					animator.m_Animator.speed = BattleManager._instance.slowSpeed;
+					Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 				}
 				break;
 				// バトル終了
@@ -199,7 +195,7 @@ public class EnemyController : MonoBehaviour {
 							state.Change(State.ASCENSION);
 						}
 						else{
-							animator.m_Animator.Play("Idle");
+							//animator.m_Animator.Play("Idle");
 							state.Change(State.MOVE);
 						}
 					}
@@ -261,5 +257,78 @@ public class EnemyController : MonoBehaviour {
 
 		GameData.GetPlayer().GetComponent<PlayerController>().hp -= damage;
 	}
+
+
+    // アクション
+    public bool isAction = false;
+    public bool isActionStart = false;
+    // バトルプレイ中コルーチン
+    IEnumerator BattlePlay()
+    {
+        int count = BattleManager._instance.battlePlayflags.Count;
+        BattleManager._instance.battlePlayflags.Add(false);
+
+        // 時間
+        float time = 1.0f;
+
+        // 移動
+        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetPlayer().up)) * Mathf.Rad2Deg;
+        float arc = (2 * Mathf.PI * GameData.GetPlanet().localScale.y * 0.5f) * (angle / 360.0f);
+        Vector3 targetVel = GameData.GetPlayer().position - transform.position;
+        Quaternion baseRotate = transform.rotation;
+
+        // ジャンプ
+        float height = BattleManager._instance.DBG_ACTION_JAMP;
+        float distance = Mathf.Sqrt(height);
+
+		// 止めるtを計算
+		float stop_t = 0.0f;
+		if (arc > 3.0f){
+			float x = (arc * 0.5f) - 1.5f;
+			stop_t = x / arc;
+		}
+
+        float t = 0.0f;
+        while(t < 1f)
+        {
+            t += (Time.deltaTime / time) * animator.m_Animator.speed;
+            t = Mathf.Min(t, 1.0f);
+
+            // 移動
+            transform.rotation = baseRotate;
+            float val = Mathf.Lerp(0.0f, arc, t);
+            Vector3 front = Vector3.ProjectOnPlane(targetVel, transform.up).normalized;
+
+            // ジャンプ
+            float x = Mathf.Lerp(0.0f, 2 * distance, t);
+            float jamp = -(Mathf.Pow(x - distance, 2)) + height;
+
+            Move(front * val, jamp);
+
+            // アクション
+            if (t > stop_t && !isAction)
+            {
+                if (!isActionStart)
+                {
+                    isActionStart = true;
+                }
+                while (!isAction)
+                {
+                    BattleResultUpdate();
+                    yield return null;
+                }
+            }
+
+            yield return null;
+        }
+
+        isActionStart = false;
+        isAction = false;
+        animator.m_Animator.Play("Idle");
+
+        rigidbody.velocity = transform.forward * speed;
+
+        BattleManager._instance.battlePlayflags[count] = true;
+    }
 #endregion
 }

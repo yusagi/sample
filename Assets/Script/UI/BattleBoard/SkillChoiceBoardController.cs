@@ -37,15 +37,15 @@ public class SkillChoiceBoardController : MonoBehaviour {
 	}
 
 	public void Battle(){
-		SkillManager player = GameData.GetPlayer().GetComponent<PlayerController>().skillManager;
-		SkillManager enemy = GameData.GetEnemy().GetComponent<EnemyController>().skillManager;
+		//SkillManager player = GameData.GetPlayer().GetComponent<PlayerController>().skillManager;
+		//SkillManager enemy = GameData.GetEnemy().GetComponent<EnemyController>().skillManager;
 		m_PlayerResult.Clear();
 		m_EnemyResult.Clear();
 		
 		int pCardNum = m_PlayerChoices.Count;
 		int eCardNum = m_EnemyChoices.Count;
-		
-		int num = (pCardNum >= eCardNum) ? pCardNum : eCardNum;
+
+        int num = 4; //(pCardNum >= eCardNum) ? pCardNum : eCardNum;
 
 		for (int i = 0; i < num; i++){
 			BattleManager.ResultPhase pahse = (BattleManager.ResultPhase)(i);
@@ -91,6 +91,29 @@ public class SkillChoiceBoardController : MonoBehaviour {
 	public bool IsFullChoice(){
 		return m_PlayerChoices.Count == BattleManager.MAX_CHOICES;
 	}
+
+    public List<SkillData> GetChoices(DataType type)
+    {
+        switch (type)
+        {
+            case DataType.PLAYER:
+                {
+                    return m_PlayerChoices;
+                }
+                break;
+            case DataType.ENEMY:
+                {
+                    return m_EnemyChoices;
+                }
+                break;
+            default:
+                {
+                    Debug.Log("out of range GetChoices");
+                    return null;
+                }
+                break;
+        }
+    }
 
 	public AnimationType GetAnimationType(BattleManager.ResultPhase pahse, DataType type){
 		

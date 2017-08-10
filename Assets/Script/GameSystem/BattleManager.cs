@@ -63,7 +63,11 @@ public class BattleManager : MonoBehaviour {
 
 	// フラグ
 	public bool skillBattleStartEnd{get;set;}
-	public bool skillBattleResultEnd{get;set;}
+    public bool skillBattlePlayEnd { get; set; }
+    public bool skillBattleResultEnd{get;set;}
+	private bool battleStart{get;set;}
+
+    public List<bool> battlePlayflags = new List<bool>();
 
 	// タイマー
 	float battleInterval = -1;
@@ -82,7 +86,9 @@ public class BattleManager : MonoBehaviour {
 	public DBGCameraType DBG_BATTLE_CAMERA_TYPE = DBGCameraType.NORMAL;
 	public bool DBG_IS_SKILLBATTLE_RESULT_STOP = true;
 	public bool DBG_IS_CAMERA_STOP = false;
-	public float time = 3.0f;
+	public bool DBG_BATTLE_START = false;
+	public float DBG_SKILL_ANIMATION_TIME = 3.0f;
+    public float DBG_ACTION_JAMP = 10.0f;
 	public UnityEngine.UI.Text hps;
 	public UnityEngine.UI.Text currentAP;
 
@@ -117,7 +123,11 @@ public class BattleManager : MonoBehaviour {
 		_instance = this;
 		battle.Change(Battle.NONE);
 		skillBattleStartEnd = false;
+        skillBattlePlayEnd = false;
 		skillBattleResultEnd = false;
+		battleStart = false;
+        battlePlayflags.Clear();
+        slowSpeed = SLOW_START;
 		BattleBoardData.Initialize();
 	}
 
@@ -131,7 +141,7 @@ public class BattleManager : MonoBehaviour {
 		if (battleInterval > 0){
 			battleInterval -= Time.deltaTime;
 		}
-		SKILLBATTLE_ANIMATION_TIME = time;
+		SKILLBATTLE_ANIMATION_TIME = DBG_SKILL_ANIMATION_TIME;
 		SKILLBATTLE_PLAY_TIME = DBG_SKILLBATTLE_PLAY_TIME;
 		hps.text = "Player " + GameData.GetPlayer().GetComponent<PlayerController>().hp + "   " + "Enemy " + GameData.GetEnemy().GetComponent<EnemyController>().hp;
 	}
@@ -175,29 +185,24 @@ public class BattleManager : MonoBehaviour {
 				// スキル表示演出
 				SkillChoiceBoardController skillChoiceBoard = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
 				if (battle.IsFirst()){
-					// プレイヤーカード生成
-					PlayerController player = GameData.GetPlayer().GetComponent<PlayerController>();
-					int pCardNum = player.skillManager.GetSkillCards().Count;
-					for (int i = 0; i < MAX_CHOICES; i ++){
-						var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
-						GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
-						instance.name = card._name;
-						instance.GetComponent<SkillCardUI>().m_Data = card;
-						skillChoiceBoard.AddCardObject(instance);
-					}
+                        // プレイヤーカード生成
+                        PlayerController player = GameData.GetPlayer().GetComponent<PlayerController>();
+                        int pCardNum = player.skillManager.GetSkillCards().Count;
+                        for (int i = 0; i < MAX_CHOICES; i++)
+                        {
+                            var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
+                            GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+                            instance.name = card._name;
+                            instance.GetComponent<SkillCardUI>().m_Data = card;
+                            skillChoiceBoard.AddCardObject(instance);
+                        }
 
-					// 敵カード選択
-					EnemyController enemy = GameData.GetEnemy().GetComponent<EnemyController>();
-					int eCardNum = enemy.skillManager.GetSkillCards().Count;
-					for (int i = 0; i < MAX_CHOICES; i++){
-						skillChoiceBoard.AddChoice(enemy.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], SkillChoiceBoardController.DataType.ENEMY);
-					}
 
-					// プレイヤーのAPを設定
-					skillChoiceBoard.m_PlayerAP = (int)(GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f);
+                        // プレイヤーのAPを設定
+                        skillChoiceBoard.m_PlayerAP = (int)(GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f);
 
-					// カード選択コルーチンスタート
-					StartCoroutine(ChoiceCard());
+                        // カード選択コルーチンスタート
+                        StartCoroutine(BattleSlow());
 				}
 
 				// APUI表示
@@ -205,11 +210,30 @@ public class BattleManager : MonoBehaviour {
 
 				// スキル選択へ
 				if (skillBattleStartEnd){
+
 					BattleBoardData.skillChoiceBoard.SetActive(false);
 					skillBattleStartEnd = false;
-					battle.Change(Battle.BATTLE_END);
-					battle.Start();
-					return;
+
+					if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoices(SkillChoiceBoardController.DataType.PLAYER).Count > 0)
+					{
+						// 敵カード選択
+						EnemyController enemy = GameData.GetEnemy().GetComponent<EnemyController>();
+						int eCardNum = enemy.skillManager.GetSkillCards().Count;
+						for (int i = 0; i < MAX_CHOICES; i++)
+						{
+							BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(enemy.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], SkillChoiceBoardController.DataType.ENEMY);
+						}
+
+						battle.Change(Battle.SKILL_BATTLE_PLAY);
+						battle.Start();
+						return;
+					}
+					else{
+						battle.Change(Battle.SKILL_BATTLE_END);
+						battle.Start();
+						return;
+					}
+
 				}
 			}
 			break;
@@ -252,12 +276,19 @@ public class BattleManager : MonoBehaviour {
 
 				if (battle.IsFirst()){
 					BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle();
-				}
+                        resultPahse.Change(ResultPhase.FIRST);
+                        resultPahse.Start();
+                    }
+
+                if (GameData.GetPlayer().GetComponent<PlayerController>().isActionStart && GameData.GetEnemy().GetComponent<EnemyController>().isActionStart)
+                    {
+                        ResultUpdate();
+                    }
 
 				//  SKILL_BATTLE_RESULTへ移行
-				if (battle.phaseTime >= SKILLBATTLE_PLAY_TIME){
+				if (!battlePlayflags.Contains(false)){
 					SkillBattlePlayFin();
-					battle.Change(Battle.SKILL_BATTLE_RESULT);
+					battle.Change(Battle.BATTLE_END);
 					battle.Start();
 					return;
 				}
@@ -266,7 +297,6 @@ public class BattleManager : MonoBehaviour {
 			// スキルバトル結果
 			case Battle.SKILL_BATTLE_RESULT:{
 				if (battle.IsFirst()){
-					SkillChoiceBoardController skillChoice = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
 					resultPahse.Change(ResultPhase.FIRST);
 					resultPahse.Start();
 					break;
@@ -285,6 +315,11 @@ public class BattleManager : MonoBehaviour {
 			break;
 			// スキルバトル終了
 			case Battle.SKILL_BATTLE_END:{
+				 if (slowSpeed >= 1.0f){
+					battle.Change(Battle.BATTLE_END);
+					battle.Start();
+					return;
+				 }
 			}
 			break;
 			// バトル終了
@@ -300,11 +335,12 @@ public class BattleManager : MonoBehaviour {
 	
 	// バトルモード突入、継続チェック
 	void RushContinuesCheck(){
-		// バトルモード中ならリターン
-		if (battle.current != Battle.NONE){
+		if (battleStart == true){
 			return;
 		}
 
+if (Input.GetKeyDown(KeyCode.Space))
+	DBG_BATTLE_START = !DBG_BATTLE_START;
 		// どのカメラタイプでエリア指定するか
 		bool tmpIsBattle = false;
 		switch(DBG_BATTLE_CAMERA_TYPE){
@@ -315,10 +351,14 @@ public class BattleManager : MonoBehaviour {
 			default: Debug.LogError("out of ragne DBG_BATTLE_CAMERA_TYPE"); break;
 		}
 
-		bool battleStart = tmpIsBattle && battleInterval < 0;
+		battleStart = tmpIsBattle && battleInterval < 0;
 
 		// バトルモード条件
 		if (battleStart){
+			// バトルモード中ならリターン
+			if (battle.current != Battle.NONE){
+				return;
+			}
 			if (GameData.GetEnemy().GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
 				return;
 			if (GameData.GetPlayer().GetComponent<PlayerController>().state.current == PlayerController.State.ASCENSION)
@@ -333,13 +373,52 @@ public class BattleManager : MonoBehaviour {
 			GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
 			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
 		}
+		else{
+			// 特定フェーズ
+			if (battle.current == Battle.BATTLE_ENCOUNT || battle.current == Battle.SKILL_BATTLE_START || battle.current == Battle.SKILL_BATTLE_CHOICE){
+				// 強制終了
+				BattleForceEnd();
+			}
+		}
+	}
+	
+	// BATTLE_START終了処理
+	void BattleEncountFin(){
+		BattleBoardData.battle_Encount.gameObject.SetActive(false);
+	}
+
+	// SKILL_BATTLE_CHOICE終了処理
+	void SkillBattleChoiceFin(){
+		BattleBoardData.skillChoiceBoard.SetActive(false);
+	}
+
+	// SKILL_BATTLE_PLAY終了処理
+	void SkillBattlePlayFin(){
+        skillBattlePlayEnd = false;
+	}
+
+	// SKILL_BATTLE_RESULT終了処理
+	void SkillBattleResultFin(){
+		skillBattleResultEnd = false;
+	}
+
+	// BATTLE_END終了処理
+	void BattleEndFin(){
+		BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().End();
+		battleInterval = BATTLE_START_INTERVAL;
+		battleStart = false;
+	}
+
+	// BATTLE_FORCE_END終了処理
+	void BattleForceEndFin(){
+		
 	}
 
 	// バトルリザルト更新
 	void ResultUpdate(){
 		switch(resultPahse.current){
 			case ResultPhase.FIRST:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm() && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()  && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.SECOND);
 					resultPahse.Start();
 					return;
@@ -347,7 +426,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.SECOND:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm() && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.THIRD);
 					resultPahse.Start();
 					return;
@@ -355,7 +434,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.THIRD:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm() && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.FOURTH);
 					resultPahse.Start();
 					return;
@@ -363,9 +442,12 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.FOURTH:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm() && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
-					skillBattleResultEnd = true;
-					return;
+				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+                        //skillBattleResultEnd = true;
+                        GameData.GetPlayer().GetComponent<PlayerController>().isAction = true;
+                        GameData.GetEnemy().GetComponent<EnemyController>().isAction =  true;
+
+                    return;
 				}
 			}
 			break;
@@ -373,8 +455,8 @@ public class BattleManager : MonoBehaviour {
 		resultPahse.Update();
 	}
 
-	// バトルカード選択中コルーチン
-	IEnumerator ChoiceCard(){
+	// バトル中スローコルーチン
+	IEnumerator BattleSlow(){
 		// 減速スロー
 		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP);
 		while(speed.MoveNext()){
@@ -389,44 +471,49 @@ public class BattleManager : MonoBehaviour {
 			yield return null;
 		}
 
+        skillBattleStartEnd = true;
+		yield return null;
+
 		// 加速スロー
-		speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP);
+        speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP);
+        while (speed.MoveNext())
+        {
+            slowSpeed = speed.Current;
+            yield return null;
+        }
+
+        slowSpeed = 1.0f;
+	}
+
+	// バトルカード選択中コルーチン
+	IEnumerator Choice(){
+		// 減速スロー
+		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP);
 		while(speed.MoveNext()){
 			slowSpeed = speed.Current;
 			yield return null;
 		}
-
-		skillBattleStartEnd = true;
-	}
-
-	// BATTLE_START終了処理
-	void BattleEncountFin(){
-		BattleBoardData.battle_Encount.gameObject.SetActive(false);
-	}
-
-	// SKILL_BATTLE_CHOICE終了処理
-	void SkillBattleChoiceFin(){
-		BattleBoardData.skillChoiceBoard.SetActive(false);
-	}
-
-	// SKILL_BATTLE_PLAY終了処理
-	void SkillBattlePlayFin(){
-		GameData.GetBattleBoard().FindChild("SkillBattleBoard").gameObject.SetActive(false);
-	}
-
-	// SKILL_BATTLE_RESULT終了処理
-	void SkillBattleResultFin(){
-		skillBattleResultEnd = false;
-	}
-
-	// BATTLE_END終了処理
-	void BattleEndFin(){
-		BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().End();
-		battleInterval = BATTLE_START_INTERVAL;
-	}
-
-	// BATTLE_FORCE_END終了処理
-	void BattleForceEndFin(){
 		
+		// 最遅スロー維持
+		float time = 0.0f;
+		while (time < SLOW_KEEP_TIME){
+			time += Time.deltaTime;
+			yield return null;
+		}
+
 	}
+
+    // バトルプレイ中コルーチン
+    IEnumerator Play(){
+
+        // 加速スロー
+        IEnumerator<float> speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP);
+        while (speed.MoveNext())
+        {
+            slowSpeed = speed.Current;
+            yield return null;
+        }
+
+        slowSpeed = 1.0f;
+    }
 }

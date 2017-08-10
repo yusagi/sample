@@ -291,11 +291,11 @@ public class UtilityMath
 		float st = start;
 		float en = end;
 		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
+		while(t < time){
+			t += Time.deltaTime;
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			float result = Mathf.LerpAngle(st, en, et);
-			yield return (t >= 1.0f) ? end : result;
+			yield return (t >= time) ? end : result;
 		}
 	}
 
@@ -304,11 +304,11 @@ public class UtilityMath
 		Quaternion st = start;
 		Quaternion en = end;
 		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
+		while(t < time){
+			t += Time.deltaTime;
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			Quaternion result = Quaternion.Lerp(st, en, et);
-			yield return (t >= 1.0f) ? end : result;
+			yield return (t >= time) ? end : result;
 		}
 	}
 
@@ -317,11 +317,11 @@ public class UtilityMath
 		Vector3 st = start;
 		Vector3 en = end;
 		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
+		while(t < time){
+			t += Time.deltaTime;
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			Vector3 result = Vector3.Lerp(st, en, et);
-			yield return (t >= 1.0f) ? end : result;
+			yield return (t >= time) ? end : result;
 		}
 	}
 
