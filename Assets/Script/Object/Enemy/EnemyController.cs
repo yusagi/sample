@@ -39,6 +39,7 @@ public class EnemyController : MonoBehaviour {
 	public float ap{get;set;}
 	// コルーチン
 	IEnumerator<Quaternion> qLerp;
+	public IEnumerator battle;
 
 #endregion
 
@@ -78,6 +79,8 @@ public class EnemyController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		rigidbody.prevPosition = transform.position;
+
 		state.Start();
 		switch(state.current){
 			// 移動
@@ -160,21 +163,15 @@ public class EnemyController : MonoBehaviour {
 				// スキルバトルプレイ
 				case BattleManager.Battle.SKILL_BATTLE_PLAY:{
 					if (BattleManager._instance.battle.IsFirst()){
-                        StartCoroutine(BattlePlay());
+        				BattleManager._instance.battlePlayflags.Add(1, false);
+                       	StartCoroutine(battle);
+					   
                         return;
 					}
-
-                    animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-                    //Move(transform.forward * speed);
-				}
-				break;
-				// スキルバトル結果
-				case BattleManager.Battle.SKILL_BATTLE_RESULT:{
-					if (BattleManager._instance.battle.IsFirst()){
-						animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
-						return;
+					
+					if (!isActionStart){
+                    	animator.m_Animator.speed = BattleManager._instance.slowSpeed;
 					}
-					BattleResultUpdate();
 				}
 				break;
 				// スキルバトル終了
@@ -263,11 +260,8 @@ public class EnemyController : MonoBehaviour {
     public bool isAction = false;
     public bool isActionStart = false;
     // バトルプレイ中コルーチン
-    IEnumerator BattlePlay()
+    public IEnumerator JampBattle()
     {
-        int count = BattleManager._instance.battlePlayflags.Count;
-        BattleManager._instance.battlePlayflags.Add(false);
-
         // 時間
         float time = 1.0f;
 
@@ -311,6 +305,7 @@ public class EnemyController : MonoBehaviour {
                 if (!isActionStart)
                 {
                     isActionStart = true;
+					animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
                 }
                 while (!isAction)
                 {
@@ -328,7 +323,66 @@ public class EnemyController : MonoBehaviour {
 
         rigidbody.velocity = transform.forward * speed;
 
-        BattleManager._instance.battlePlayflags[count] = true;
+        BattleManager._instance.battlePlayflags[1] = true;
     }
+
+	// 正面バトル
+	public IEnumerator FrontBattle(){
+		Vector3 toPlayer = GameData.GetPlayer().position - transform.position;
+		Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
+		transform.rotation = Quaternion.LookRotation(front, transform.up);
+
+		while(!isActionStart){
+			float distance = Vector3.Distance(rigidbody.prevPosition, GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.prevPosition);
+			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
+				isActionStart = true;
+				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
+			}
+			else{
+				Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				yield return null;
+			}
+		}
+
+		while(!isAction){
+			BattleResultUpdate();
+			yield return null;
+		}
+
+		isActionStart = false;
+		isAction = false;
+        animator.m_Animator.Play("Idle");
+		BattleManager._instance.battlePlayflags[1] = true;
+	}
+
+	// 背面バトル
+	public IEnumerator BackBattle(){
+		animator.m_Animator.SetBool("Run", false);
+		animator.m_Animator.Play("Idle");
+		Vector3 toPlayer = GameData.GetPlayer().position - transform.position;
+		Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
+		transform.rotation = Quaternion.LookRotation(front, transform.up);
+
+		while(!isActionStart){
+			float distance = Vector3.Distance(rigidbody.prevPosition, GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.prevPosition);
+			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
+				isActionStart = true;
+				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
+			}
+			else{
+				yield return null;
+			}
+		}
+
+		while(!isAction){
+			BattleResultUpdate();
+			yield return null;
+		}
+
+		isActionStart = false;
+		isAction = false;
+		animator.m_Animator.Play("Idle");
+		BattleManager._instance.battlePlayflags[1] = true;
+	}
 #endregion
 }

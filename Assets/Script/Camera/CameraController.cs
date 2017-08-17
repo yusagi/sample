@@ -9,9 +9,7 @@ public class CameraController : MonoBehaviour {
     // カメラ状態
 	public enum CameraPhase{
 		NORMAL,
-		PULL,
 		BATTLE,
-		LOOKAT,
 	}
 
 	// プレイヤー進行方向
@@ -45,18 +43,14 @@ public class CameraController : MonoBehaviour {
 	public Vector3 NORMAL_OFFSET_BACK_POS = new Vector3(0, 3.4f, -18);
 	public float NORMAL_OFFSET_BACK_V_ANGLE = 16.5f;
 
-	// 見下ろしカメラ
-	public Vector3 PULL_OFFSET_POS = new Vector3(0, 3.4f, -28);
-	public float PULL_OFFSET_V_ANGLE = 31;
-
 	// バトルカメラ
 	public Vector3 BATTLE_OFFSET_POS;
 	public float BATTLE_OFFSET_V_ANGLE;
-	public float BATTLE_AREA_ANGLE = 30;
 
-	// 注目カメラ
-	public Vector3 LOOKAT_OFFSET_POS;
-	public float LOOKAT_OFFSET_V_ANGLE;
+	public Vector3 BATTLE_START_POS;
+	public float BATTLE_START_V_ANGLE;
+	public Vector3 BATTLE_START_BACK_POS;
+	public float BATTLE_START_BACK_V_ANGLE;
 
 	public bool battleCameraControlleComp{get;set;}
 
@@ -128,55 +122,7 @@ public class CameraController : MonoBehaviour {
 					osPos = VLerp(offsetPos, offset);
 					dirType = current;
 				}
-				NormalCamera(offset);
-
-				if (Input.GetKeyDown(KeyCode.Space)){
-					//phase.Change(CameraPhase.LOOKAT);
-					//return;
-				}
-			}
-			break;
-			// 見下ろしカメラ
-			case CameraPhase.PULL:{
-				if (phase.IsFirst()){
-					float anmSpeed = 0.3f;
-					GameData.GetPlayer().GetComponent<Animator>().speed = anmSpeed;
-					GameData.GetEnemy().GetComponent<Animator>().speed =  anmSpeed;
-					vRotate = FLerp(offsetVAngle, PULL_OFFSET_V_ANGLE);
-					osPos = VLerp(offsetPos, PULL_OFFSET_POS);
-				}
-				PullCamera();
-				// 通常カメラ条件
-				if (!IsInPullCameraFramework()){
-					phase.Change(CameraPhase.NORMAL);
-				}
-			}
-			break;
-			// 注目
-			case CameraPhase.LOOKAT:{
-				if (phase.IsFirst()){
-					vRotate = UtilityMath.FLerp(offsetVAngle, LOOKAT_OFFSET_V_ANGLE);
-					osPos = UtilityMath.VLerp(offsetPos, LOOKAT_OFFSET_POS);
-				}
-
-				Vector3 baseFront = (baseRotate * Vector3.forward);
-				Vector3 toEnemy = (GameData.GetEnemy().position - GameData.GetPlayer().position).normalized;
-				Vector3 front = Vector3.ProjectOnPlane(toEnemy, GameData.GetPlayer().up).normalized;
-				float hAngle = UtilityMath.GetAngleUnlimit(baseFront, baseRotate * Vector3.up, front);
-				if (hAngle > UtilityMath.epsilon){
-					hRotate = UtilityMath.FLerp(offsetHAngle, hAngle, 0.1f);
-				}
-				hRotate.MoveNext();
-				offsetHAngle = hRotate.Current;
-
-				offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : LOOKAT_OFFSET_V_ANGLE; 
-				offsetPos = (osPos.MoveNext()) ? osPos.Current : LOOKAT_OFFSET_POS;
-				SetPose();
-
-				if (Input.GetKeyDown(KeyCode.Space)){
-					phase.Change(CameraPhase.NORMAL);
-					return;
-				}
+				NormalCamera(offset, vAngle);
 			}
 			break;
 			// バトルモード
@@ -184,64 +130,13 @@ public class CameraController : MonoBehaviour {
 				if (phase.IsFirst()){
 					float vAngle = 0.0f;
 					Vector3 offset = Vector3.zero;
-					// デバグ：バトルモード時のカメラタイプをインスペクタから変更
-					switch(BattleManager._instance.DBG_BATTLE_CAMERA_TYPE){
-						// NORMAL
-						case BattleManager.DBGCameraType.NORMAL:{
-							switch(dirType){
-								case DirType.FRONT: offset = NORMAL_OFFSET_POS; vAngle = NORMAL_OFFSET_V_ANGLE; break;
-								case DirType.BACK: offset = NORMAL_OFFSET_BACK_POS; vAngle = NORMAL_OFFSET_BACK_V_ANGLE; break;
-								default: Debug.LogError("out of ragne DirType"); break;
-							}
-						}
-						break;
-						// PULL
-						case BattleManager.DBGCameraType.PULL:{
-							vAngle = PULL_OFFSET_V_ANGLE;
-							offset = PULL_OFFSET_POS;
-						}
-						break;
-						// LOOKAT
-						case BattleManager.DBGCameraType.LOOKAT:{
-							vAngle = LOOKAT_OFFSET_V_ANGLE;
-							offset = LOOKAT_OFFSET_POS;
-						}
-						break;
-						// STOP
-						case BattleManager.DBGCameraType.STOP:{
-							vAngle = offsetVAngle;
-							offset = offsetPos;
-						}
-						break;
-						default: Debug.LogError("out of ragne DBGCameraType"); break;
-					}
-					BATTLE_OFFSET_V_ANGLE = vAngle;
-					BATTLE_OFFSET_POS = offset;
+					BATTLE_OFFSET_V_ANGLE = offsetVAngle;
+					BATTLE_OFFSET_POS = offsetPos;
 					vRotate = FLerp(offsetVAngle, BATTLE_OFFSET_V_ANGLE);
 					osPos = VLerp(osPos.Current, BATTLE_OFFSET_POS);
 				}
 				// バトルモード状態
 				switch(BattleManager._instance.battle.current){
-					// バトル結果
-					case BattleManager.Battle.SKILL_BATTLE_RESULT:{
-						if(!BattleManager._instance.DBG_IS_SKILLBATTLE_RESULT_STOP){
-							if (BattleManager._instance.DBG_BATTLE_CAMERA_TYPE == BattleManager.DBGCameraType.LOOKAT){
-								Vector3 baseFront = (baseRotate * Vector3.forward);
-								Vector3 toEnemy = (GameData.GetEnemy().position - GameData.GetPlayer().position).normalized;
-								Vector3 front = Vector3.ProjectOnPlane(toEnemy, GameData.GetPlayer().up).normalized;
-								float hAngle = UtilityMath.GetAngleUnlimit(baseFront, baseRotate * Vector3.up, front);
-								if (hAngle > UtilityMath.epsilon){
-									hRotate = UtilityMath.FLerp(offsetHAngle, hAngle, 0.1f);
-								}
-								hRotate.MoveNext();
-								offsetHAngle = hRotate.Current;
-							}
-							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : BATTLE_OFFSET_V_ANGLE;
-							offsetPos = osPos.MoveNext() ? osPos.Current : BATTLE_OFFSET_POS;
-							SetPose();
-						}
-					}
-					break;
 					// バトル終了
 					case BattleManager.Battle.BATTLE_END:{
 						if(BattleManager._instance.battle.IsFirst()){
@@ -308,7 +203,7 @@ public class CameraController : MonoBehaviour {
 	}
 
 	// プレイヤーの動きに並行して付いていくカメラ
-	void NormalCamera(Vector3 offset){
+	void NormalCamera(Vector3 offset, float vAngle){
 		// 横回転角度
 		offsetHAngle += DragAngle();
 		// 角度の正規化
@@ -321,7 +216,7 @@ public class CameraController : MonoBehaviour {
 		}
 
 		// 縦回転
-		offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : NORMAL_OFFSET_V_ANGLE;
+		offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : vAngle;
 
 		// offset
 		offsetPos = (osPos.MoveNext()) ? osPos.Current : offset;
@@ -330,21 +225,6 @@ public class CameraController : MonoBehaviour {
 		SetPose();
 	}
 #endregion
-
-#region 見下ろしカメラ
-	void PullCamera(){
-		// 縦回転
-		offsetVAngle = (vRotate.MoveNext()) ? vRotate.Current : PULL_OFFSET_V_ANGLE;
-		
-		// offset
-		offsetPos = (osPos.MoveNext()) ? osPos.Current : PULL_OFFSET_POS;
-		
-		// カメラポーズ設定
-		SetPose();
-	}
-#endregion
-
-
 
 #region コルーチン
 	// 横回転補間
@@ -409,120 +289,36 @@ public class CameraController : MonoBehaviour {
 	public Quaternion GetHorizontalRotate(){
 		return RotateXYAxis(baseRotate, offsetHAngle, 0.0f);
 	}
-	
-	// NormalCameraの枠内か？
-	public bool IsInNormalCameraFramework(){
-		Quaternion tmpRotate = transform.rotation;
-		Vector3 tmpPos = transform.position;
-		
-		// 基回転
-		Quaternion bRot = baseRotate;
-		// 水平アングル
-		float hAngle = offsetHAngle;
-		// 垂直アングル
-		float vAngle = 0.0f;
-		// offset座標
-		Vector3 offset = Vector3.zero;
-		switch(dirType){
-			case DirType.FRONT: offset = NORMAL_OFFSET_POS; vAngle = NORMAL_OFFSET_V_ANGLE; break;
-			case DirType.BACK: offset = NORMAL_OFFSET_BACK_POS; vAngle = NORMAL_OFFSET_BACK_V_ANGLE; break;
-			default: Debug.LogError("out of ragne DirType"); break;
-		}
-
-		// カメラポーズ設定
-		transform.rotation = RotateXYAxis(bRot, hAngle, vAngle);
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offset);
-
-
-		bool result = true;
-		// ターゲット座標
-		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
-		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
-		if (sPos.x < 0 || sPos.x > Screen.width)
-			result = false;
-
-		float h = 100;
-		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
-			result = false;
-
-		Ray ray = Camera.main.ScreenPointToRay(sPos);
-		RaycastHit hit;
-		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(Layer.PLAYER | Layer.PILLER)))){
-			if (hit.collider.tag == "Planet"){
-				result = false;
-			}
-		}
-		else{
-			result = false;
-		}
-
-		transform.rotation = tmpRotate;
-		transform.position = tmpPos;
-
-		return result;
-	}
-
-	// PullCameraの枠内か？
-	public bool IsInPullCameraFramework(){
-		Quaternion tmpRotate = transform.rotation;
-		Vector3 tmpPos = transform.position;
-
-		bool result = true;
-		
-		// 基回転
-		Quaternion bRot = baseRotate;
-		// 水平アングル
-		float hAngle = offsetHAngle;
-		// 垂直アングル
-		float vAngle = PULL_OFFSET_V_ANGLE;
-		// 座標
-		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
-		// offset座標
-		Vector3 offset = PULL_OFFSET_POS;
-
-		// カメラポーズ設定
-		transform.rotation = RotateXYAxis(bRot, hAngle, vAngle);
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offset);
-
-
-
-		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
-		if (sPos.x < 0 || sPos.x > Screen.width)
-			result = false;
-
-		float h = 100;
-		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
-			result = false;
-
-		Ray ray = Camera.main.ScreenPointToRay(sPos);
-		RaycastHit hit;
-		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(Layer.PLAYER | Layer.PILLER)))){
-			if (hit.collider.tag == "Planet"){
-				result = false;
-			}
-		}
-		else{
-			result = false;
-		}
-
-		transform.rotation = tmpRotate;
-		transform.position = tmpPos;
-
-		return result;
-	}
-
-	// BattleCameraの枠内か？
-	bool IsInBattleCameraFramework(){
-		float angle = Mathf.Acos(Vector3.Dot(GameData.GetPlayer().up, GameData.GetEnemy().up)) * Mathf.Rad2Deg;
-		if (angle <= BATTLE_AREA_ANGLE){
-			return true;
-		}
-		return false;
-	}
 
 	// 現在のカメラの枠内か？
 	public bool IsInCameraFramework(){
 		bool result = true;
+
+		Vector3 tmpPos = transform.position;
+		Quaternion tmpRot = transform.rotation;
+
+		Vector3 position = Vector3.zero;
+		float vAngle = 0.0f;
+		switch(dirType){
+			case DirType.FRONT:{
+				position = BATTLE_START_POS;
+				vAngle = BATTLE_START_V_ANGLE;
+			}
+			break;
+			case DirType.BACK:{
+				position = BATTLE_START_BACK_POS;
+				vAngle = BATTLE_START_BACK_V_ANGLE; 
+			}
+			break;
+		}
+		// position = offsetPos;
+		// vAngle = offsetVAngle;
+
+		// 回転
+		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, vAngle);
+		// 座標設定
+		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, position);
+
 		// ターゲット座標
 		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
 		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
@@ -543,6 +339,10 @@ public class CameraController : MonoBehaviour {
 		else{
 			result = false;
 		}
+
+		transform.position = tmpPos;
+		transform.rotation = tmpRot;
+
 		return result;
 	}
 
