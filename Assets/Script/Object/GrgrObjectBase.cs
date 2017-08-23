@@ -29,7 +29,7 @@ public class GrgrObjectBase : MonoBehaviour {
     // 球体を与えられた移動量で移動
     protected void GrgrMove(Vector3 velocity, float jamp)
     {
-        Transform planet = GameData.GetPlanet();
+        Transform planet = GameManager.m_Planet.transform;
 
         if (velocity.magnitude > Vector3.kEpsilon)
         {
@@ -44,7 +44,7 @@ public class GrgrObjectBase : MonoBehaviour {
     // 球体を与えられた角度で移動
     protected void GrgrMove(float angle, float jamp)
     {
-        Transform planet = GameData.GetPlanet();
+        Transform planet = GameManager.m_Planet.transform;
 
         if (angle > Vector3.kEpsilon)
         {
@@ -56,7 +56,7 @@ public class GrgrObjectBase : MonoBehaviour {
     // 与えられた座標に移動
     protected void GrgrSetPosition(Vector3 position, float jamp)
     {
-        Transform planet = GameData.GetPlanet();
+        Transform planet = GameManager.m_Planet.transform;
 
         Vector3 up = (position - planet.position);
         if (up.magnitude > Vector3.kEpsilon)

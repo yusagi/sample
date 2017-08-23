@@ -14,26 +14,30 @@ public class ArrowController : MonoBehaviour {
 
 #region Unity関数
 	void Awake(){
-		Transform player = GameData.GetPlayer();
-		transform.position = player.position;
-		transform.position += player.forward * offset.z;
-		arrow = GetComponentInChildren<Image>();
 	}
 
 	// Use this for initialization
 	void Start () {
-		
-	}
+        Transform player = GameManager.m_Player.transform;
+        transform.position = player.position;
+        transform.position += player.forward * offset.z;
+        arrow = GetComponentInChildren<Image>();
+    }
 	
 	// Update is called once per frame
 	void Update () {
 	}
 
 	void LateUpdate(){
-		Transform target = GameData.GetEnemy();
-		Transform player = GameData.GetPlayer();
+        if (GameManager.m_Enemy == null)
+        {
+            return;
+        }
 
-		if (target.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION){
+		Transform target = GameManager.m_Enemy.transform;
+		Transform player = GameManager.m_Player.transform;
+
+		if (target.GetComponent<PlayerController>().state.current == PlayerController.State.ASCENSION){
 			arrow.enabled = false;
 			return;
 		}
@@ -41,6 +45,11 @@ public class ArrowController : MonoBehaviour {
 			arrow.enabled = true;
 		}
 		Vector3 targetVelocity = (target.position - player.position).normalized;
+        if (targetVelocity.magnitude <= Vector3.kEpsilon)
+        {
+            return;
+        }
+
 		targetVelocity = Vector3.ProjectOnPlane(targetVelocity, player.up).normalized;
 		transform.rotation = Quaternion.LookRotation(targetVelocity, player.up);
 

@@ -30,14 +30,14 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 	void DrawLine(){
 		lineDraw.numPositions = vertexNums;
 		List<Vector3> vertexs = new List<Vector3>();
-		Quaternion pRotate = GameData.GetPlayer().rotation;
+		Quaternion pRotate =GameManager.m_Player.transform.rotation;
 		float vAngle = 30.0f;
 		for(int i = 0; i <= vertexNums; i++){
 			Vector3 p;
 			Quaternion rotate = Quaternion.AngleAxis(i, pRotate * Vector3.up) * pRotate;
 			rotate = Quaternion.AngleAxis(vAngle, rotate * Vector3.right) * rotate;
 
-			p = GameData.GetPlanet().position + (rotate * Vector3.up * (GameData.GetPlanet().localScale.y * 0.5f + 0.1f));
+			p = GameManager.m_Planet.transform.position + (rotate * Vector3.up * (GameManager.m_Planet.transform.localScale.y * 0.5f + 0.1f));
 			vertexs.Add(p);
 		}
 		transform.rotation = Quaternion.identity;

@@ -8,10 +8,11 @@ public class FrameCount : MonoBehaviour{
 	int fps;
 	float lastTime = 0;
 
-	public UnityEngine.UI.Text text;
+	public UnityEngine.UI.Text text { get; set; }
 
 	void Awake(){
 		lastTime = Time.realtimeSinceStartup;
+        text = GetComponent<UnityEngine.UI.Text>();
 	}
 
 	void Update(){

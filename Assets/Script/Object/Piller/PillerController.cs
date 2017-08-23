@@ -12,16 +12,16 @@ public class PillerController : MonoBehaviour {
 	// 地上からの高さ調整
 	public float HEIGHT_FROM_GROUND;
 
-#endregion
+    #endregion
 
 #region Unity関数
+    void Start()
+    {
+        rigidbody = new Rigidbody_grgr(transform);
+        transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+    }
 
-	protected void Awake(){
-		rigidbody = new Rigidbody_grgr(transform);
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
-	}
-
-	protected void Update(){
+    void Update(){
 		rigidbody.Update();
 	}
 

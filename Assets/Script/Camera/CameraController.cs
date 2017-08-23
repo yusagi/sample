@@ -18,9 +18,11 @@ public class CameraController : MonoBehaviour {
 		BACK,
 	}
 
-#endregion
+    #endregion
 
-#region メンバ変数
+    #region メンバ変数
+
+    private Transform m_Player;
 
 	public Vector3 offsetPos{get;set;}
 	public float offsetVAngle{get; set;}
@@ -63,35 +65,36 @@ public class CameraController : MonoBehaviour {
 
 #region Unity関数
 
-	void Awake(){
-		baseRotate = GameData.GetPlayer().rotation;
-		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, NORMAL_OFFSET_V_ANGLE);
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, NORMAL_OFFSET_POS);
-
-		phase.Change(CameraPhase.NORMAL);
-		
-		offsetHAngle = 0.0f;
-		offsetVAngle = NORMAL_OFFSET_V_ANGLE;
-		offsetPos = NORMAL_OFFSET_POS;
-		dirType = DirType.FRONT;
-
-		hRotate = FLerp(offsetHAngle, offsetHAngle);
-		while(hRotate.MoveNext());
-		vRotate = FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
-		while(vRotate.MoveNext());
-		osPos = VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
-		while(osPos.MoveNext());
-	}
 	// Use this for initialization
-	void Start () {
-	}
+	void Start ()
+    {
+        m_Player = GameManager.m_Player.transform;
+
+        baseRotate = m_Player.rotation;
+        transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, NORMAL_OFFSET_V_ANGLE);
+        transform.position = OffsetPos(transform.rotation, m_Player.position, NORMAL_OFFSET_POS);
+
+        phase.Change(CameraPhase.NORMAL);
+
+        offsetHAngle = 0.0f;
+        offsetVAngle = NORMAL_OFFSET_V_ANGLE;
+        offsetPos = NORMAL_OFFSET_POS;
+        dirType = DirType.FRONT;
+
+        hRotate = FLerp(offsetHAngle, offsetHAngle);
+        while (hRotate.MoveNext()) ;
+        vRotate = FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
+        while (vRotate.MoveNext()) ;
+        osPos = VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
+        while (osPos.MoveNext()) ;
+    }
 	
 	// Update is called once per frame
 	void Update () {
 	}
 	
 	void LateUpdate(){
-		baseRotate = GetBaseRotate(baseRotate, GameData.GetPlayer().up);
+		baseRotate = GetBaseRotate(baseRotate, m_Player.up);
 
 		phase.Start();
 		switch(phase.current){
@@ -111,8 +114,6 @@ public class CameraController : MonoBehaviour {
 					default: Debug.LogError("out of ragne DirType"); break;
 				}
 				if (phase.IsFirst()){
-					GameData.GetPlayer().GetComponent<Animator>().speed = 1f;
-					GameData.GetEnemy().GetComponent<Animator>().speed = 1f;
 					
 					vRotate = FLerp(offsetVAngle, vAngle);
 					osPos = VLerp(offsetPos, offset);
@@ -188,7 +189,7 @@ public class CameraController : MonoBehaviour {
 
 	// プレイヤーの進行方向確認
 	DirType CheckDirType(){
-		Vector3 vel = GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.velocity;
+		Vector3 vel =m_Player.GetComponent<PlayerController>().rigidbody.velocity;
 		if (vel.magnitude < UtilityMath.epsilon){
 			return DirType.FRONT;
 		}
@@ -232,7 +233,7 @@ public class CameraController : MonoBehaviour {
 		float s = start; //offsetHAngle;
 		float e = end;// Mathf.Acos(Vector3.Dot(transform.forward, player.forward)) * Mathf.Rad2Deg;
 		float t = 0.0f;
-		Vector3 cross = Vector3.Cross(transform.forward, GameData.GetPlayer().forward).normalized + transform.up;
+		Vector3 cross = Vector3.Cross(transform.forward, m_Player.forward).normalized + transform.up;
 		if (cross.magnitude <= UtilityMath.epsilon){
 			e = -e + 360;
 		}
@@ -317,10 +318,10 @@ public class CameraController : MonoBehaviour {
 		// 回転
 		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, vAngle);
 		// 座標設定
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, position);
+		transform.position = OffsetPos(transform.rotation, m_Player.position, position);
 
 		// ターゲット座標
-		Vector3 t = GameData.GetEnemy().position + GameData.GetEnemy().up * (GameData.GetEnemy().GetComponent<CapsuleCollider>().height);
+		Vector3 t = GameManager.m_Enemy.transform.position + GameManager.m_Enemy.transform.up * (GameManager.m_Enemy.transform.GetComponent<CapsuleCollider>().height);
 		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
 		if (sPos.x < 0 || sPos.x > Screen.width)
 			result = false;
@@ -381,7 +382,7 @@ public class CameraController : MonoBehaviour {
 		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, offsetVAngle);
 		
 		// 座標設定
-		transform.position = OffsetPos(transform.rotation, GameData.GetPlayer().position, offsetPos);
+		transform.position = OffsetPos(transform.rotation, m_Player.position, offsetPos);
 	}
 
 #endregion

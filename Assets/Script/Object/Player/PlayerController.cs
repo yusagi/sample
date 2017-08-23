@@ -21,10 +21,13 @@ public class PlayerController : MonoBehaviour {
 		Second,
 		Third
 	}
-	
-#endregion
+
+    #endregion
 
 #region メンバ変数
+
+    private GameObject m_Planet;
+
 	// 摩擦
 	public float minFriction = 0.001f; 	// 最小摩擦力
 	public float maxFriction = 0.01f; 	// 最大摩擦力
@@ -37,7 +40,7 @@ public class PlayerController : MonoBehaviour {
 	public float gearSecondAccele = 5.0f;	// ギア2加速度
 	public float gearThirdAccele = 2.0f;	// ギア3加速度
 	public float maxSpeed = 50.0f;			// 最高速度
-	public Vector3 currentVelocity{get;set;}	// 最新フレームのフリック移動量
+
 	// ビタ止め
 	public float MOVE_FRICK_STOP_ANGLE = 0;	// フリックビタ止め条件値
 	public float MOVE_TOUCH_STOP_TIME = 1;	// タッチビタ止め条件値
@@ -45,8 +48,6 @@ public class PlayerController : MonoBehaviour {
     public float HEIGHT_FROM_GROUND = -0.6f;
     // HP
     public int hp = 100;
-    // UI
-    public Text curS;   // 速度
     // コンポーネント
     public AnimatorChecker animator { get; set; }// アニメーター
 	// 付属クラス
@@ -55,7 +56,6 @@ public class PlayerController : MonoBehaviour {
 	// 状態
 	public Phase<State> state = new Phase<State>();
 	private Gear gear;  // ギア
-	public TouchController.TouchType touchType{get;set;}
     // フラグ
     public bool isActionStart { get; set; }      // ジャンプバトル開始
     public bool isAction { get; set; }           // ジャンプバトル中
@@ -67,40 +67,54 @@ public class PlayerController : MonoBehaviour {
 	// コルーチン
 	IEnumerator<Quaternion> qLerp;
 	public IEnumerator battle{get;set;}
-	
-#endregion
+
+    // 外部入力
+    public TouchType m_TouchType { get; set; }
+    public Vector3 m_CurrentVelocity { get; set; }
+    public bool m_TouchStopFlag { get; set; }
+    public Quaternion m_CurrentRotate { get; set; }
+
+    #endregion
 
 #region Unity関数
-	void Awake()
-	{
-		skillManager = new SkillManager();
-		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.JAB]);
-		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.HIKICK]);
-		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.SPINKICK]);
-		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.COUNTER]);
-		skillManager.AddSkill(SkillDataBase.DATAS[SkillType.JAB]);
-		
-		rigidbody = new Rigidbody_grgr(transform);
-		rigidbody.isMove = false;
 
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
-        
-		animator = GetComponent<AnimatorChecker>();
+    void Awake()
+    {
+        m_Planet = GameManager.m_Planet;
 
-		gear = Gear.First;
-		state.Change(State.STOP);
+        skillManager = new SkillManager();
+        skillManager.AddSkill(SkillDataBase.DATAS[SkillType.JAB]);
+        skillManager.AddSkill(SkillDataBase.DATAS[SkillType.HIKICK]);
+        skillManager.AddSkill(SkillDataBase.DATAS[SkillType.SPINKICK]);
+        skillManager.AddSkill(SkillDataBase.DATAS[SkillType.COUNTER]);
+        skillManager.AddSkill(SkillDataBase.DATAS[SkillType.JAB]);
 
-		touchType = TouchController.TouchType.None;
+        rigidbody = new Rigidbody_grgr(transform);
+        rigidbody.isMove = false;
+
+        transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+
+        animator = GetComponent<AnimatorChecker>();
+
+        gear = Gear.First;
+        state.Change(State.STOP);
+
 
         isActionStart = false;
         isAction = false;
 
-		ascensionTimer = ASCENSION_TIME;
-	}
+        ascensionTimer = ASCENSION_TIME;
 
-	// Use this for initialization
-	void Start () {
-	}
+        m_TouchType = TouchType.None;
+        m_CurrentVelocity = Vector3.zero;
+        m_TouchStopFlag = false;
+        m_CurrentRotate = Quaternion.identity;
+    }
+
+    // Use this for initialization
+    void Start ()
+    {
+    }
 
     // Update is called once per frame
     void Update () {
@@ -115,30 +129,30 @@ public class PlayerController : MonoBehaviour {
 			// ストップ状態
 			case State.STOP: {
 				if (state.IsFirst()){
-					currentVelocity = Vector3.zero;
-					transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y*0.5f, HEIGHT_FROM_GROUND);
+					m_CurrentVelocity = Vector3.zero;
+					transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y*0.5f, HEIGHT_FROM_GROUND);
 				}
 				
 				// ドラッグ移動条件
-				if (TouchController.GetTouchType() == TouchController.TouchType.Drag){
-					currentVelocity = DragVelocity();
-					GrgrMove(currentVelocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				if (m_TouchType == TouchType.Drag){
+                    Vector3 velocity = DragVelocity();
+					GrgrMove(velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 					state.Change(State.DRAG_MOVE);
 				}
 				// フリック移動条件
-				else if (TouchController.GetTouchType() == TouchController.TouchType.Frick){
-					currentVelocity = FlickVelocity();
-					FlickMove();
+				else if (m_TouchType == TouchType.Frick){
+					Vector3 velocity = FlickVelocity();
+					FlickMove(velocity);
 					state.Change(State.FLICK_MOVE);
 				}
 			}
 			break;
 			// ドラッグ移動状態
 			case State.DRAG_MOVE:{
-				currentVelocity = DragVelocity();
+                 Vector3 velocity = DragVelocity();
 
 				// 現在のドラッグ移動量
-				float mVal = currentVelocity.magnitude;
+				float mVal = velocity.magnitude;
 
 				// ストップ移動条件
 				if (mVal < UtilityMath.epsilon){
@@ -150,14 +164,14 @@ public class PlayerController : MonoBehaviour {
 					return;
 				}
 				
-				GrgrMove(currentVelocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				GrgrMove(velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
 			}
 			break;
 			// フリック移動状態
 			case State.FLICK_MOVE: {
-				currentVelocity = FlickVelocity();
+				Vector3 velocity = FlickVelocity();
 				// 現在フレームの移動量
-				float s = (currentVelocity.magnitude + rigidbody.GetSpeed()) * Time.deltaTime;
+				float s = (velocity.magnitude + rigidbody.GetSpeed()) * Time.deltaTime;
 				// ストップ移動条件
 				if (s < UtilityMath.epsilon || IsMoveStop()){
 					rigidbody.velocity = Vector3.zero;
@@ -167,17 +181,7 @@ public class PlayerController : MonoBehaviour {
 					animator.m_Animator.SetBool("Run", false);
 					return;
 				}
-				FlickMove();
-				// ビタ止め移行モーション変化
-				{
-					if (TouchController.IsPlanetTouch())
-					{
-						if (TouchController.GetTouchTimer() > MOVE_TOUCH_STOP_TIME * 0.5f)
-							animator.m_Animator.SetBool("Run", false);
-						else
-							animator.m_Animator.SetBool("Run", true);
-					}
-				}
+				FlickMove(velocity);
 			}
 			break;
 			// 昇天
@@ -192,8 +196,6 @@ public class PlayerController : MonoBehaviour {
 			break;
 		}
 		state.Update();
-
-		curS.text = (int)(rigidbody.GetSpeed() * 3.6f) + "km";
 	}
 
 	
@@ -207,11 +209,11 @@ public class PlayerController : MonoBehaviour {
 		// 移動量を円弧とし、角度を求めて移動する
 		if (velocity.magnitude > Vector3.kEpsilon){
 			float arc = velocity.magnitude;
-			float angle = arc / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
+			float angle = arc / (2.0f*Mathf.PI*m_Planet.transform.transform.localScale.y*0.5f) * 360.0f;
 			transform.rotation = Quaternion.LookRotation(velocity.normalized, transform.up);
 			transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
 		}
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
 	}
 
 	// 球体ぐるぐるrigidbody.velocity加算
@@ -231,10 +233,10 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	// フリック移動処理
-	void FlickMove(){
+	void FlickMove(Vector3 velocity){
 		// フリックを移動量に加算
 		{
-			GrgrAddForce(currentVelocity);
+			GrgrAddForce(velocity);
 		}
 
 		// ギアの設定
@@ -263,9 +265,11 @@ public class PlayerController : MonoBehaviour {
 	
 	// フリック移動量
 	Vector3 FlickVelocity(){
-		if (!TouchController.IsPlanetTouch()){
-			return Vector3.zero;
-		}
+
+        if (m_CurrentVelocity.magnitude < Vector3.kEpsilon)
+        {
+            return Vector3.zero;
+        }
 
 		float speed = 0.0f;
 		// 移動量変化
@@ -276,42 +280,31 @@ public class PlayerController : MonoBehaviour {
 				case Gear.Third: speed = gearThirdAccele; break;
 			}
 		}
-
-		Vector3 velocity = Vector3.zero;
+        
 		// 移動ベクトル作成
 		{
-			
-			velocity = -TouchController.GetFlickVelocity();
-			velocity = GameData.GetCamera().rotation * velocity;
+			Vector3 velocity = m_CurrentRotate * m_CurrentVelocity;
 			
 			float tmp = Mathf.Clamp(velocity.magnitude, 0.0f, 1080);
 			tmp = Mathf.Clamp(tmp / 1080, 0.1f, 1.0f);
 
-			velocity = Vector3.ProjectOnPlane(velocity, transform.up).normalized * tmp * speed;
+            return Vector3.ProjectOnPlane(velocity, transform.up).normalized * tmp * speed;
 		}
-
-		return velocity;
 	}
 
 	// ドラッグ移動量
 	Vector3 DragVelocity(){
-		if (!TouchController.IsPlanetTouch())
-			return Vector3.zero;
 
-		Vector3 velocity = Vector3.zero;
-		
-		// ドラッグ移動
-		if (!TouchController.IsFlickSuccess())
-		{
-			velocity = -TouchController.GetDragVelocity();
-			if (velocity.magnitude < DRAG_PERMISSION)
-				return Vector3.zero;
+        if (m_CurrentVelocity.magnitude < DRAG_PERMISSION)
+        {
+            return Vector3.zero;
+        }
 
-			velocity = GameData.GetCamera().rotation * velocity.normalized;
-			velocity = Vector3.ProjectOnPlane(velocity, transform.up).normalized;
-		}
+        Vector3 velocity;
+        velocity = m_CurrentRotate * m_CurrentVelocity.normalized;
+        velocity = Vector3.ProjectOnPlane(velocity, transform.up).normalized;
 
-		return velocity * dragSpeed;
+        return velocity * dragSpeed;
 	}
 #endregion
 
@@ -381,10 +374,10 @@ public class PlayerController : MonoBehaviour {
 				// 	other.collider.GetComponent<EnemyController>().rigidbody.isMove = true;
 				// 	other.collider.GetComponent<Animator>().SetBool("Run", false);
 				// 	other.collider.GetComponent<Animator>().SetBool("DamageDown", true);
-				// 	GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
+				// 	GameManager.m_Enemy.transform.GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
 				// }
 				// else if (skillManager.result == SkillAttributeResult.LOSE){
-				// 	Vector3 impact = (transform.up - transform.forward) * GameData.GetEnemy().GetComponent<EnemyController>().speed * 0.03f;
+				// 	Vector3 impact = (transform.up - transform.forward) * GameManager.m_Enemy.transform.GetComponent<EnemyController>().speed * 0.03f;
 				// 	rigidbody.velocity = Vector3.zero;
 				// 	rigidbody.AddForce(impact);
 				// 	rigidbody.isMove = true;
@@ -394,7 +387,7 @@ public class PlayerController : MonoBehaviour {
 				// }
 				// else{
 				// 	state.Change(State.FLICK_MOVE);
-				// 	GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.MOVE);
+				// 	GameManager.m_Enemy.transform.GetComponent<EnemyController>().state.Change(EnemyController.State.MOVE);
 				// }
 				// GameData.GetBattleManager().GetComponent<BattleManager>().skillBattleResultEnd = true;
 			}
@@ -402,7 +395,7 @@ public class PlayerController : MonoBehaviour {
 			else{
 				// other.collider.GetComponent<Animator>().SetBool("Run", false);
 				// other.collider.GetComponent<Animator>().SetBool("DamageDown", true);
-				// GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
+				// GameManager.m_Enemy.transform.GetComponent<EnemyController>().state.Change(EnemyController.State.ASCENSION);
 			}
 		}
 	}
@@ -416,11 +409,7 @@ public class PlayerController : MonoBehaviour {
 
 	// フリックビタ止めフラグ関数
 	bool IsMoveFrickStop(){
-		if (!TouchController.IsPlanetTouch()){
-			return false;
-		}
-		
-		Vector3 frickVel = -TouchController.GetFlickVelocity();
+        Vector3 frickVel = m_CurrentVelocity;
 		Vector3 backVel = new Vector3(0, 0, -1);
 		float dot = Vector3.Dot(backVel.normalized, frickVel.normalized);
 		float angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
@@ -429,10 +418,7 @@ public class PlayerController : MonoBehaviour {
 
 	// タッチ止めフラグ関数
 	bool IsMoveTouchStop(){
-		if (!TouchController.IsPlanetTouch()){
-			return false;
-		}
-		return (TouchController.GetTouchTimer() > MOVE_TOUCH_STOP_TIME);
+        return m_TouchStopFlag;
 	}
 #endregion
 
@@ -462,7 +448,7 @@ public class PlayerController : MonoBehaviour {
 	// バトルモード更新
 	void BattleUpdate(){
 		if (state.IsFirst()){
-			currentVelocity = Vector3.zero;
+			m_CurrentVelocity = Vector3.zero;
 		}
 
 		switch(BattleManager._instance.battle.current){
@@ -473,7 +459,7 @@ public class PlayerController : MonoBehaviour {
 				}
 				
 				animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-				FlickMove();
+				FlickMove(Vector3.zero);
 			}
 			break;
 			// スキルバトルプレイ
@@ -494,7 +480,7 @@ public class PlayerController : MonoBehaviour {
 			// スキルバトル終了
 			case BattleManager.Battle.SKILL_BATTLE_END:{
 				animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-				FlickMove();
+				FlickMove(Vector3.zero);
 			}
 			break;
 			// バトル終了
@@ -569,7 +555,7 @@ public class PlayerController : MonoBehaviour {
 			break;
 		}
 
-		GameData.GetEnemy().GetComponent<EnemyController>().hp -= damage;
+		GameManager.m_Enemy.transform.GetComponent<EnemyController>().hp -= damage;
 	}
 
     // シャンプバトル
@@ -579,9 +565,9 @@ public class PlayerController : MonoBehaviour {
         float time = 1.0f;
 
         // 移動
-        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetEnemy().up)) * Mathf.Rad2Deg;
-        float arc = (2 * Mathf.PI * GameData.GetPlanet().localScale.y * 0.5f) * (angle / 360.0f);
-        Vector3 targetVel = (GameData.GetEnemy().position + GameData.GetEnemy().right) - transform.position;
+        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameManager.m_Enemy.transform.up)) * Mathf.Rad2Deg;
+        float arc = (2 * Mathf.PI * m_Planet.transform.localScale.y * 0.5f) * (angle / 360.0f);
+        Vector3 targetVel = (GameManager.m_Enemy.transform.position + GameManager.m_Enemy.transform.right) - transform.position;
         Quaternion baseRotate = transform.rotation;
 
         // ジャンプ
@@ -643,19 +629,19 @@ public class PlayerController : MonoBehaviour {
 
 	// 正面衝突バトル
 	public IEnumerator FrontBattle(){
-		Vector3 toEnemy = GameData.GetEnemy().position - transform.position;
+		Vector3 toEnemy = GameManager.m_Enemy.transform.position - transform.position;
 		Vector3 front = Vector3.ProjectOnPlane(toEnemy, transform.up).normalized;
 		transform.rotation = Quaternion.LookRotation(front, transform.up);
 		rigidbody.velocity = front * rigidbody.GetSpeed();
 
 		while(!isActionStart){
-			float distance = Vector3.Distance(rigidbody.prevPosition, GameData.GetEnemy().GetComponent<EnemyController>().rigidbody.prevPosition);
+			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Enemy.transform.GetComponent<EnemyController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
 				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
 			}
 			else{
-				FlickMove();
+				FlickMove(Vector3.zero);
 				yield return null;
 			}
 		}

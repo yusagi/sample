@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum TouchType
+{
+    TouchDown,
+    TouchUp,
+    Frick,
+    Drag,
+    None
+}
+
 public class TouchController : MonoBehaviour {
 
-	public enum TouchType{
-		TouchDown,
-		TouchUp,
-		Frick,
-		Drag,
-		None
-	}
 	
 	public static Vector3 touchStartPos{get;set;}
 	public static Vector3 touchEndPos{get;set;}
@@ -128,11 +130,10 @@ public class TouchController : MonoBehaviour {
 	void DragUpdate(){
 #if UNITY_EDITOR
 		if (isDrag){
-			touchTimer += Time.deltaTime;
 			if (Input.GetKey(KeyCode.Mouse0))
 			{
-
-				prevDragPos = currentDragPos;
+                touchTimer += Time.deltaTime;
+                prevDragPos = currentDragPos;
 				currentDragPos = new Vector3(Input.mousePosition.x,
 										Input.mousePosition.y,
 										0.0f);
@@ -140,8 +141,8 @@ public class TouchController : MonoBehaviour {
 		}
 #else
 		if (isDrag){
-			touchTimer += Time.deltaTime;
 			if (Input.touchCount > 0){
+			    touchTimer += Time.deltaTime;
 				Touch t = Input.GetTouch(0);
 				if (t.phase == TouchPhase.Moved)
 				{
@@ -153,9 +154,9 @@ public class TouchController : MonoBehaviour {
 			}
 		}
 #endif
-	}
+    }
 
-	public static Vector3 GetFlickVelocity(){
+    public static Vector3 GetFlickVelocity(){
 
 		if (isFlick){
 			return new Vector3( touchEndPos.x - touchStartPos.x,
@@ -169,7 +170,7 @@ public class TouchController : MonoBehaviour {
 	
 	public static Vector3 GetDragVelocity(){
 
-		if (isDrag && touchTimer > 0){
+		if (isDrag && touchTimer > 0 && !IsFlickSuccess()){
 			return new Vector3 (currentDragPos.x - prevDragPos.x,
 								0.0f,
 								currentDragPos.y - prevDragPos.y);
@@ -177,6 +178,17 @@ public class TouchController : MonoBehaviour {
 
 		return Vector3.zero;
 	}
+
+    public static Vector3 GetVelocity(TouchType type)
+    {
+        switch (type)
+        {
+            case TouchType.Drag: return GetDragVelocity();
+            case TouchType.Frick: return GetFlickVelocity();
+        }
+
+        return Vector3.zero;
+    }
 
 	public static bool IsFlickSuccess(){
 		return (touchTimer < FLICK_SUCCESS_TIME);

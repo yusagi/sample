@@ -58,7 +58,7 @@ public class EnemyController : MonoBehaviour {
 		rigidbody = new Rigidbody_grgr(transform);
 		rigidbody.isMove = false;
 
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 
 		animator = GetComponent<AnimatorChecker>();
 
@@ -112,12 +112,12 @@ public class EnemyController : MonoBehaviour {
 	void Move(Vector3 velocity, float jamp){
 		if (velocity.magnitude > Vector3.kEpsilon){
 			float length = velocity.magnitude;
-			float angle = length / (2.0f*Mathf.PI*GameData.GetPlanet().transform.localScale.y*0.5f) * 360.0f;
+			float angle = length / (2.0f*Mathf.PI*GameManager.m_Planet.transform.transform.localScale.y*0.5f) * 360.0f;
 			transform.rotation = Quaternion.LookRotation(velocity, transform.up);
 			transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
 		}
 		
-		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameData.GetPlanet().position, GameData.GetPlanet().localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
+		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
 	}
 #endregion
 
@@ -252,7 +252,7 @@ public class EnemyController : MonoBehaviour {
 			break;
 		}
 
-		GameData.GetPlayer().GetComponent<PlayerController>().hp -= damage;
+		GameManager.m_Player.GetComponent<PlayerController>().hp -= damage;
 	}
 
 
@@ -266,9 +266,9 @@ public class EnemyController : MonoBehaviour {
         float time = 1.0f;
 
         // 移動
-        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameData.GetPlayer().up)) * Mathf.Rad2Deg;
-        float arc = (2 * Mathf.PI * GameData.GetPlanet().localScale.y * 0.5f) * (angle / 360.0f);
-        Vector3 targetVel = GameData.GetPlayer().position - transform.position;
+        float angle = Mathf.Acos(Vector3.Dot(transform.up, GameManager.m_Player.transform.up)) * Mathf.Rad2Deg;
+        float arc = (2 * Mathf.PI * GameManager.m_Planet.transform.localScale.y * 0.5f) * (angle / 360.0f);
+        Vector3 targetVel = GameManager.m_Player.transform.position - transform.position;
         Quaternion baseRotate = transform.rotation;
 
         // ジャンプ
@@ -328,12 +328,12 @@ public class EnemyController : MonoBehaviour {
 
 	// 正面バトル
 	public IEnumerator FrontBattle(){
-		Vector3 toPlayer = GameData.GetPlayer().position - transform.position;
+		Vector3 toPlayer = GameManager.m_Player.transform.position - transform.position;
 		Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
 		transform.rotation = Quaternion.LookRotation(front, transform.up);
 
 		while(!isActionStart){
-			float distance = Vector3.Distance(rigidbody.prevPosition, GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.prevPosition);
+			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Player.GetComponent<PlayerController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
 				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
@@ -359,12 +359,12 @@ public class EnemyController : MonoBehaviour {
 	public IEnumerator BackBattle(){
 		animator.m_Animator.SetBool("Run", false);
 		animator.m_Animator.Play("Idle");
-		Vector3 toPlayer = GameData.GetPlayer().position - transform.position;
+		Vector3 toPlayer = GameManager.m_Player.transform.position - transform.position;
 		Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
 		transform.rotation = Quaternion.LookRotation(front, transform.up);
 
 		while(!isActionStart){
-			float distance = Vector3.Distance(rigidbody.prevPosition, GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.prevPosition);
+			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Player.GetComponent<PlayerController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
 				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;

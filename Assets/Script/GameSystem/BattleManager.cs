@@ -44,9 +44,12 @@ public class BattleManager : MonoBehaviour {
 		NONE,
 	}
 
-#endregion
+    #endregion
 
-#region メンバ変数
+    #region メンバ変数
+
+    private Transform m_Player;
+    private Transform m_Target;
 
 	// 状態
 	public Phase<Battle> battle = new Phase<Battle>();
@@ -105,21 +108,20 @@ public class BattleManager : MonoBehaviour {
 		_instance.battle.Start();
 	}
 
-	void Awake(){
-		_instance = this;
-		battle.Change(Battle.NONE);
-		skillBattleStartEnd = false;
-        skillBattlePlayEnd = false;
-		battleStart = false;
-        battlePlayflags.Clear();
-        slowSpeed = SLOW_START;
-		BattleBoardData.Initialize();
-	}
-
 	// Use this for initialization
 	void Start () {
-		
-	}
+        m_Player = GameManager.m_Player.transform;
+        m_Target = GameManager.m_Enemy.transform;
+
+        _instance = this;
+        battle.Change(Battle.NONE);
+        skillBattleStartEnd = false;
+        skillBattlePlayEnd = false;
+        battleStart = false;
+        battlePlayflags.Clear();
+        slowSpeed = SLOW_START;
+        BattleBoardData.Initialize();
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -128,7 +130,7 @@ public class BattleManager : MonoBehaviour {
 		}
 		SKILLBATTLE_ANIMATION_TIME = DBG_SKILL_ANIMATION_TIME;
 		SKILLBATTLE_PLAY_TIME = DBG_SKILLBATTLE_PLAY_TIME;
-		hps.text = "Player " + GameData.GetPlayer().GetComponent<PlayerController>().hp + "   " + "Enemy " + GameData.GetEnemy().GetComponent<EnemyController>().hp;
+		hps.text = "Player " + m_Player.GetComponent<PlayerController>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<PlayerController>().hp;
 	}
 
 	void LateUpdate(){
@@ -152,7 +154,6 @@ public class BattleManager : MonoBehaviour {
 				// エンカウント演出
 
 				if (battle.IsFirst()){
-					BattleBoardData.battle_Encount.SetActive(true);
 					BattleBoardData.skillChoiceBoard.SetActive(true);
 				}
 
@@ -171,7 +172,7 @@ public class BattleManager : MonoBehaviour {
 				SkillChoiceBoardController skillChoiceBoard = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
 				if (battle.IsFirst()){
                         // プレイヤーカード生成
-                        PlayerController player = GameData.GetPlayer().GetComponent<PlayerController>();
+                        PlayerController player = m_Player.GetComponent<PlayerController>();
                         int pCardNum = player.skillManager.GetSkillCards().Count;
                         for (int i = 0; i < MAX_CHOICES; i++)
                         {
@@ -184,7 +185,7 @@ public class BattleManager : MonoBehaviour {
 
 
                         // プレイヤーのAPを設定
-                        skillChoiceBoard.m_PlayerAP = (int)(GameData.GetPlayer().GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f);
+                        skillChoiceBoard.m_PlayerAP = (int)(m_Player.GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f);
 
                         // カード選択コルーチンスタート
                         StartCoroutine(BattleSlow());
@@ -202,7 +203,7 @@ public class BattleManager : MonoBehaviour {
 					if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoices(SkillChoiceBoardController.DataType.PLAYER).Count > 0)
 					{
 						// 敵カード選択
-						EnemyController enemy = GameData.GetEnemy().GetComponent<EnemyController>();
+						EnemyController enemy = m_Target.transform.GetComponent<EnemyController>();
 						int eCardNum = enemy.skillManager.GetSkillCards().Count;
 						for (int i = 0; i < MAX_CHOICES; i++)
 						{
@@ -210,19 +211,19 @@ public class BattleManager : MonoBehaviour {
 						}
 
 						// バトル状態設定
-						Vector3 line = GameData.GetEnemy().position - GameData.GetPlayer().position;
-						Vector3 halfPos = GameData.GetPlayer().position + (line*0.5f);
-						Vector3 up = (halfPos - GameData.GetPlanet().position);
-						Vector3 pFront = Vector3.ProjectOnPlane(GameData.GetPlayer().forward, up).normalized;
-						Vector3 eFront = Vector3.ProjectOnPlane(GameData.GetEnemy().forward, up).normalized;
+						Vector3 line = m_Target.transform.position - m_Player.position;
+						Vector3 halfPos = m_Player.position + (line*0.5f);
+						Vector3 up = (halfPos - GameManager.m_Planet.transform.position);
+						Vector3 pFront = Vector3.ProjectOnPlane(m_Player.forward, up).normalized;
+						Vector3 eFront = Vector3.ProjectOnPlane(m_Target.transform.forward, up).normalized;
 						float angle = Mathf.Acos(Vector3.Dot(pFront, eFront)) * Mathf.Rad2Deg;
 						if (angle <= 45.0f){
-							GameData.GetEnemy().GetComponent<EnemyController>().battle = GameData.GetEnemy().GetComponent<EnemyController>().BackBattle();
+							m_Target.transform.GetComponent<EnemyController>().battle = m_Target.transform.GetComponent<EnemyController>().BackBattle();
 						}
 						else{
-							GameData.GetEnemy().GetComponent<EnemyController>().battle = GameData.GetEnemy().GetComponent<EnemyController>().FrontBattle();
+							m_Target.transform.GetComponent<EnemyController>().battle = m_Target.transform.GetComponent<EnemyController>().FrontBattle();
 						}
-						GameData.GetPlayer().GetComponent<PlayerController>().battle = GameData.GetPlayer().GetComponent<PlayerController>().FrontBattle();
+						m_Player.GetComponent<PlayerController>().battle = m_Player.GetComponent<PlayerController>().FrontBattle();
 						Debug.Log(angle);	
 
 						battle.Change(Battle.SKILL_BATTLE_PLAY);
@@ -249,7 +250,7 @@ public class BattleManager : MonoBehaviour {
                     }
 
 				if (battlePlayflags.ContainsValue(false)){
-					if (GameData.GetPlayer().GetComponent<PlayerController>().isActionStart && GameData.GetEnemy().GetComponent<EnemyController>().isActionStart)
+					if (m_Player.GetComponent<PlayerController>().isActionStart && m_Target.transform.GetComponent<EnemyController>().isActionStart)
 					{
 						ResultUpdate();
 					}
@@ -302,9 +303,9 @@ if (Input.GetKeyDown(KeyCode.Space))
 			if (battle.current != Battle.NONE){
 				return;
 			}
-			if (GameData.GetEnemy().GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
+			if (m_Target.transform.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
 				return;
-			if (GameData.GetPlayer().GetComponent<PlayerController>().state.current == PlayerController.State.ASCENSION)
+			if (m_Player.GetComponent<PlayerController>().state.current == PlayerController.State.ASCENSION)
 				return;
 			
 			// バトルエンカウント
@@ -312,8 +313,8 @@ if (Input.GetKeyDown(KeyCode.Space))
 			battle.Start();
 
 			// プレイヤー、エネミー、カメラがバトルに突入
-			GameData.GetPlayer().GetComponent<PlayerController>().state.Change(PlayerController.State.BATTLE);
-			GameData.GetEnemy().GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
+			m_Player.GetComponent<PlayerController>().state.Change(PlayerController.State.BATTLE);
+			m_Target.transform.GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
 			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
 		}
 		else{
@@ -327,7 +328,6 @@ if (Input.GetKeyDown(KeyCode.Space))
 	
 	// BATTLE_START終了処理
 	void BattleEncountFin(){
-		BattleBoardData.battle_Encount.gameObject.SetActive(false);
 	}
 
 	// SKILL_BATTLE_CHOICE終了処理
@@ -357,7 +357,7 @@ if (Input.GetKeyDown(KeyCode.Space))
 	void ResultUpdate(){
 		switch(resultPahse.current){
 			case ResultPhase.FIRST:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()  && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()  && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.SECOND);
 					resultPahse.Start();
 					return;
@@ -365,7 +365,7 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.SECOND:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.THIRD);
 					resultPahse.Start();
 					return;
@@ -373,7 +373,7 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.THIRD:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
 					resultPahse.Change(ResultPhase.FOURTH);
 					resultPahse.Start();
 					return;
@@ -381,10 +381,10 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.FOURTH:{
-				if (GameData.GetPlayer().GetComponent<PlayerController>().animator.IsEndAllAnm()   && GameData.GetEnemy().GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
                         //skillBattleResultEnd = true;
-                        GameData.GetPlayer().GetComponent<PlayerController>().isAction = true;
-                        GameData.GetEnemy().GetComponent<EnemyController>().isAction =  true;
+                        m_Player.GetComponent<PlayerController>().isAction = true;
+                        m_Target.transform.GetComponent<EnemyController>().isAction =  true;
 
                     return;
 				}
