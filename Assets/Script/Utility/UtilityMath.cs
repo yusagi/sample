@@ -287,12 +287,17 @@ public class UtilityMath
 	}
 
 	// float補間
-	public static IEnumerator<float> FLerp(float start, float end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f){
+	public static IEnumerator<float> FLerp(float start, float end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f, bool isUnScale = false){
 		float st = start;
 		float en = end;
 		float t = 0.0f;
 		while(t < time){
-			t += Time.deltaTime;
+			if (isUnScale){
+				t += Time.unscaledDeltaTime;
+			}
+			else{
+				t += Time.deltaTime;
+			}
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			float result = Mathf.LerpAngle(st, en, et);
 			yield return (t >= time) ? end : result;
@@ -300,12 +305,17 @@ public class UtilityMath
 	}
 
 	// Quaternion補間
-	public static IEnumerator<Quaternion> QLerp(Quaternion start, Quaternion end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f){
+	public static IEnumerator<Quaternion> QLerp(Quaternion start, Quaternion end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f, bool isUnScale = false){
 		Quaternion st = start;
 		Quaternion en = end;
 		float t = 0.0f;
 		while(t < time){
-			t += Time.deltaTime;
+			if (isUnScale){
+				t += Time.unscaledDeltaTime;
+			}
+			else{
+				t += Time.deltaTime;
+			}
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			Quaternion result = Quaternion.Lerp(st, en, et);
 			yield return (t >= time) ? end : result;
@@ -313,12 +323,17 @@ public class UtilityMath
 	}
 
 	// Vector3補間
-	public static IEnumerator<Vector3> VLerp(Vector3 start, Vector3 end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f){
+	public static IEnumerator<Vector3> VLerp(Vector3 start, Vector3 end, float time = 1.0f, EaseType type = EaseType.LINEAR, float s = 1.0f, bool isUnScale = false){
 		Vector3 st = start;
 		Vector3 en = end;
 		float t = 0.0f;
 		while(t < time){
-			t += Time.deltaTime;
+			if (isUnScale){
+				t += Time.unscaledDeltaTime;
+			}
+			else{
+				t += Time.deltaTime;
+			}
 			float et = (float)GetEasing(type, t, time, 1.0f, 0.0f, s);
 			Vector3 result = Vector3.Lerp(st, en, et);
 			yield return (t >= time) ? end : result;

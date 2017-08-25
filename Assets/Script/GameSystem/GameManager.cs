@@ -23,7 +23,7 @@ public class GameManager : MonoBehaviour {
         m_Player.transform.SetParent(transform, true);
 
         // エネミー
-        m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
+        m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Enemy"));
         m_Enemy.name = "Enemy";
         m_Enemy.transform.SetParent(transform, true);
 
@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour {
         PlayerUpdate();
 
         // エネミー更新
-        EnemyUpdate();
+        //EnemyUpdate();
 	}
 
     void PlayerUpdate()
@@ -76,10 +76,12 @@ public class GameManager : MonoBehaviour {
             {
                 if (TouchController.IsPlanetTouch())
                 {
-                    if (TouchController.GetTouchTimer() > playerController.MOVE_TOUCH_STOP_TIME * 0.5f)
-                        playerController.animator.m_Animator.SetBool("Run", false);
-                    else
-                        playerController.animator.m_Animator.SetBool("Run", true);
+                    if (TouchController.GetTouchTimer() > playerController.MOVE_TOUCH_STOP_TIME * 0.5f){
+                         playerController.m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
+                    }
+                    else{
+                         playerController.m_AnmController.ChangeAnimationLoop("Run", 0.1f, 0);
+                    }
 
                     if (TouchController.GetTouchTimer() > playerController.MOVE_TOUCH_STOP_TIME)
                     {

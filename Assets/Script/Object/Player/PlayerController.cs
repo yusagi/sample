@@ -49,7 +49,7 @@ public class PlayerController : MonoBehaviour {
     // HP
     public int hp = 100;
     // コンポーネント
-    public AnimatorChecker animator { get; set; }// アニメーター
+    public AnimationController m_AnmController { get; set; }// アニメーター
 	// 付属クラス
 	public Rigidbody_grgr rigidbody { get; set; }
 	public SkillManager skillManager{get;set;}
@@ -94,7 +94,7 @@ public class PlayerController : MonoBehaviour {
 
         transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 
-        animator = GetComponent<AnimatorChecker>();
+        m_AnmController = GetComponent<AnimationController>();
 
         gear = Gear.First;
         state.Change(State.STOP);
@@ -115,7 +115,6 @@ public class PlayerController : MonoBehaviour {
     void Start ()
     {
     }
-
     // Update is called once per frame
     void Update () {
         // 最大速度を変更
@@ -136,7 +135,7 @@ public class PlayerController : MonoBehaviour {
 				// ドラッグ移動条件
 				if (m_TouchType == TouchType.Drag){
                     Vector3 velocity = DragVelocity();
-					GrgrMove(velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+					GrgrMove(velocity * Time.deltaTime, 0.0f);
 					state.Change(State.DRAG_MOVE);
 				}
 				// フリック移動条件
@@ -159,16 +158,20 @@ public class PlayerController : MonoBehaviour {
 					rigidbody.velocity = Vector3.zero;
 					rigidbody.friction = maxFriction;
 					gear = Gear.First;
-					animator.m_Animator.SetBool("Run", false);
+					m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
 					state.Change(State.STOP);
 					return;
 				}
 				
-				GrgrMove(velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				GrgrMove(velocity * Time.deltaTime, 0.0f);
 			}
 			break;
 			// フリック移動状態
 			case State.FLICK_MOVE: {
+				if (state.IsFirst()){
+					m_AnmController.ChangeAnimationLoop("Run", 0.1f, 0);
+				}
+				
 				Vector3 velocity = FlickVelocity();
 				// 現在フレームの移動量
 				float s = (velocity.magnitude + rigidbody.GetSpeed()) * Time.deltaTime;
@@ -178,7 +181,8 @@ public class PlayerController : MonoBehaviour {
 					rigidbody.friction = maxFriction;
 					gear = Gear.First;
 					state.Change(State.STOP);
-					animator.m_Animator.SetBool("Run", false);
+					m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
+					m_TouchStopFlag = false;
 					return;
 				}
 				FlickMove(velocity);
@@ -256,9 +260,9 @@ public class PlayerController : MonoBehaviour {
 			// 摩擦の計算
 			double friction = UtilityMath.OutExp(t, 1.0f, minFriction, maxFriction);
 			
-			rigidbody.friction = (float)friction * animator.m_Animator.speed;
+			rigidbody.friction = (float)friction;
 		}
-		GrgrMove(rigidbody.velocity * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+		GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
 
 		rigidbody.Update();
 	}
@@ -312,8 +316,7 @@ public class PlayerController : MonoBehaviour {
 	void AscensionIni(Vector3 impact){
 		rigidbody.isMove = true;
 		rigidbody.velocity = impact;
-        animator.m_Animator.SetBool("Run", false);
-		animator.m_Animator.Play("DamageDown");
+		m_AnmController.ChangeAnimation("DamageDown", 0.1f, 0, 1);
 	}
 
 	void Ascension(){
@@ -323,7 +326,7 @@ public class PlayerController : MonoBehaviour {
 			rigidbody.velocity = Vector3.zero;
 			transform.rotation = Random.rotation;
 			ascensionTimer = ASCENSION_TIME;
-			animator.m_Animator.Play("Idle");
+			m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
 			hp = 100;
 			state.Change(State.STOP);
 		}
@@ -458,7 +461,6 @@ public class PlayerController : MonoBehaviour {
 					return;
 				}
 				
-				animator.m_Animator.speed = BattleManager._instance.slowSpeed;
 				FlickMove(Vector3.zero);
 			}
 			break;
@@ -471,23 +473,16 @@ public class PlayerController : MonoBehaviour {
 
                         return;
 				}
-				if (!isActionStart){
-					animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-				}
-
 			}
 			break;
 			// スキルバトル終了
 			case BattleManager.Battle.SKILL_BATTLE_END:{
-				animator.m_Animator.speed = BattleManager._instance.slowSpeed;
 				FlickMove(Vector3.zero);
 			}
 			break;
 			// バトル終了
 			case BattleManager.Battle.BATTLE_END:{
 				if (BattleManager._instance.battle.IsFirst()){
-					animator.m_Animator.speed = 1.0f;
-					
 					// ライフが0になったら
 					if (hp <= 0){
 						Vector3 impact = transform.up;
@@ -541,16 +536,20 @@ public class PlayerController : MonoBehaviour {
 		switch(controller.GetAnimationType(resultPhase, SkillChoiceBoardController.DataType.PLAYER)){
 			case AnimationType.NORMAL_ATTACK:{
 				SkillData data = controller.GetSkillData(resultPhase, SkillChoiceBoardController.DataType.PLAYER);
-				animator.Play(data._anmName);
+				m_AnmController.ChangeAnimation(data._anmName, 0.1f, 0, 0.8f);
 				damage = data._attack;
 			}
 			break;
 			case AnimationType.COUNTER_ATTACK:{
 				SkillData data = controller.GetSkillData(resultPhase, SkillChoiceBoardController.DataType.ENEMY);
-				animator.Play("Land", 0.4f);
-				animator.Play("Rising_P");
+				m_AnmController.ChangeAnimation("Land", 0.1f, 0, 0.3f);
+				m_AnmController.ChainAnimation(new AnmData("Rising_P", 0.1f, 0, 1));
 				damage = data._attack;
 				hp += damage;
+			}
+			break;
+			case AnimationType.NONE:{
+				m_AnmController.SetAnmState(AnmState.END);
 			}
 			break;
 		}
@@ -585,7 +584,7 @@ public class PlayerController : MonoBehaviour {
 
         while(t < 1f)
         {
-            t += (Time.deltaTime / time) * animator.m_Animator.speed;
+            t += (Time.deltaTime / time);
             t = Mathf.Min(t, 1.0f);
 
             // 移動
@@ -605,7 +604,6 @@ public class PlayerController : MonoBehaviour {
                 if (!isActionStart)
                 {
                     isActionStart = true;
-					animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
 
                 }
                 while (!isAction)
@@ -620,7 +618,6 @@ public class PlayerController : MonoBehaviour {
 
         isActionStart = false;
         isAction = false;
-        animator.m_Animator.Play("Idle");
 
         rigidbody.velocity = transform.forward * rigidbody.GetSpeed();
 
@@ -638,10 +635,10 @@ public class PlayerController : MonoBehaviour {
 			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Enemy.transform.GetComponent<EnemyController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
-				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
 			}
 			else{
-				FlickMove(Vector3.zero);
+				rigidbody.velocity = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized * rigidbody.GetSpeed();
+				GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
 				yield return null;
 			}
 		}
@@ -653,7 +650,6 @@ public class PlayerController : MonoBehaviour {
 
 		isActionStart = false;
 		isAction = false;
-        animator.m_Animator.Play("Idle");
 		BattleManager._instance.battlePlayflags[0] = true;
 	}
 

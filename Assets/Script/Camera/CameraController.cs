@@ -29,7 +29,7 @@ public class CameraController : MonoBehaviour {
 	public float offsetHAngle{get;set;}
 
 	public float dragSpeed = 8.0f;
-	public float DRAG_PERMISSION = 10.0f;
+	public float DRAG_PERMISSION = 1.0f;
 	
 	private Quaternion baseRotate;
 
@@ -81,11 +81,11 @@ public class CameraController : MonoBehaviour {
         offsetPos = NORMAL_OFFSET_POS;
         dirType = DirType.FRONT;
 
-        hRotate = FLerp(offsetHAngle, offsetHAngle);
+        hRotate = UtilityMath.FLerp(offsetHAngle, offsetHAngle);
         while (hRotate.MoveNext()) ;
-        vRotate = FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
+        vRotate = UtilityMath.FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
         while (vRotate.MoveNext()) ;
-        osPos = VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
+        osPos = UtilityMath.VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
         while (osPos.MoveNext()) ;
     }
 	
@@ -115,12 +115,12 @@ public class CameraController : MonoBehaviour {
 				}
 				if (phase.IsFirst()){
 					
-					vRotate = FLerp(offsetVAngle, vAngle);
-					osPos = VLerp(offsetPos, offset);
+					vRotate = UtilityMath.FLerp(offsetVAngle, vAngle);
+					osPos = UtilityMath.VLerp(offsetPos, offset);
 				}
 				else if (current != dirType){
-					vRotate = FLerp(offsetVAngle, vAngle);
-					osPos = VLerp(offsetPos, offset);
+					vRotate = UtilityMath.FLerp(offsetVAngle, vAngle);
+					osPos = UtilityMath.VLerp(offsetPos, offset);
 					dirType = current;
 				}
 				NormalCamera(offset, vAngle);
@@ -133,8 +133,8 @@ public class CameraController : MonoBehaviour {
 					Vector3 offset = Vector3.zero;
 					BATTLE_OFFSET_V_ANGLE = offsetVAngle;
 					BATTLE_OFFSET_POS = offsetPos;
-					vRotate = FLerp(offsetVAngle, BATTLE_OFFSET_V_ANGLE);
-					osPos = VLerp(osPos.Current, BATTLE_OFFSET_POS);
+					vRotate = UtilityMath.FLerp(offsetVAngle, BATTLE_OFFSET_V_ANGLE);
+					osPos = UtilityMath.VLerp(osPos.Current, BATTLE_OFFSET_POS);
 				}
 				// バトルモード状態
 				switch(BattleManager._instance.battle.current){
@@ -225,63 +225,6 @@ public class CameraController : MonoBehaviour {
 		// カメラポーズ設定
 		SetPose();
 	}
-#endregion
-
-#region コルーチン
-	// 横回転補間
-	IEnumerator<float> HorizontalRotate(float start, float end){
-		float s = start; //offsetHAngle;
-		float e = end;// Mathf.Acos(Vector3.Dot(transform.forward, player.forward)) * Mathf.Rad2Deg;
-		float t = 0.0f;
-		Vector3 cross = Vector3.Cross(transform.forward, m_Player.forward).normalized + transform.up;
-		if (cross.magnitude <= UtilityMath.epsilon){
-			e = -e + 360;
-		}
-		//float 
-		while(t < 1.0f){
-			t += Time.deltaTime;
-			t = Mathf.Min(t, 1.0f);
-			float angle = Mathf.LerpAngle(s, e, t);
-			yield return angle;
-		}
-	}
-
-	// float補間
-	IEnumerator<float> FLerp(float start, float end, float time = 1.0f){
-		float s = start;
-		float e = end;
-		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
-			float result = Mathf.LerpAngle(s, e, t);
-			yield return (t >= 1.0f) ? end : result;
-		}
-	}
-
-	// Quaternion補間
-	IEnumerator<Quaternion> QLerp(Quaternion start, Quaternion end, float time = 1.0f){
-		Quaternion s = start;
-		Quaternion e = end;
-		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
-			Quaternion result = Quaternion.Slerp(s, e, t);
-			yield return (t >= 1.0f) ? end : result;
-		}
-	}
-
-	// Vector3補間
-	IEnumerator<Vector3> VLerp(Vector3 start, Vector3 end, float time = 1.0f){
-		Vector3 s = start;
-		Vector3 e = end;
-		float t = 0.0f;
-		while(t < 1.0f){
-			t = Time.deltaTime / time + t;
-			Vector3 result = Vector3.Slerp(s, e, t);
-			yield return (t >= 1.0f) ? end : result;
-		}
-	}
-
 #endregion
 
 #region 共通関数

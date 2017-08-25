@@ -55,9 +55,14 @@ public class TouchController : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-		Ray ray = Camera.main.ScreenPointToRay(touchStartPos);
-		RaycastHit hit;
-		isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)Layer.PLANET);
+		if (isDrag){
+			Ray ray = Camera.main.ScreenPointToRay(touchStartPos);
+			RaycastHit hit;
+			isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)Layer.PLANET);
+		}
+		else{
+			isPlanetTouch = false;
+		}
 
 		if (isFlick)
 			isFlick = false;

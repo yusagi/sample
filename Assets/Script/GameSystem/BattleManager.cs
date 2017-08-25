@@ -7,12 +7,9 @@ public class BattleManager : MonoBehaviour {
 #region static変数
 	public static BattleManager _instance;
 
-	public static float BATTLE_ENCOUNT_TIME = 0.0f;
-	public static float SKILLBATTLE_PLAY_TIME = 0.5f;
-	public static float SKILLBATTLE_RESULT_TIME = 1.0f;
-	public static float SKILLBATTLE_CHOICE_TIME = 5.0f;
-	public static float BATTLE_START_INTERVAL = 4.0f;
-	public static float SKILLBATTLE_ANIMATION_TIME = 3.0f;
+	public float BATTLE_ENCOUNT_TIME = 0.0f;
+	public float BATTLE_START_INTERVAL = 4.0f;
+	public float SKILLBATTLE_ANIMATION_TIME = 3.0f;
 	
 	public static int MAX_CHOICES = 4;
 #endregion
@@ -75,11 +72,7 @@ public class BattleManager : MonoBehaviour {
 	public float slowSpeed{get;set;}
 
 	// デバグ
-	public float DBG_SKILLBATTLE_PLAY_TIME = 1.0f;
-	public bool DBG_IS_SKILLBATTLE_RESULT_STOP = true;
 	public bool DBG_IS_CAMERA_STOP = false;
-	public bool DBG_BATTLE_START = false;
-	public float DBG_SKILL_ANIMATION_TIME = 3.0f;
     public float DBG_ACTION_JAMP = 10.0f;
 	public float DBG_PLAY_DISTANCE = 3.0f;
 
@@ -128,9 +121,7 @@ public class BattleManager : MonoBehaviour {
 		if (battleInterval > 0){
 			battleInterval -= Time.deltaTime;
 		}
-		SKILLBATTLE_ANIMATION_TIME = DBG_SKILL_ANIMATION_TIME;
-		SKILLBATTLE_PLAY_TIME = DBG_SKILLBATTLE_PLAY_TIME;
-		hps.text = "Player " + m_Player.GetComponent<PlayerController>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<PlayerController>().hp;
+		hps.text = "Player " + m_Player.GetComponent<PlayerController>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<EnemyController>().hp;
 	}
 
 	void LateUpdate(){
@@ -289,9 +280,7 @@ public class BattleManager : MonoBehaviour {
 		if (battleStart == true){
 			return;
 		}
-
-if (Input.GetKeyDown(KeyCode.Space))
-	DBG_BATTLE_START = !DBG_BATTLE_START;
+		
 		// どのカメラタイプでエリア指定するか
 		bool tmpIsBattle = tmpIsBattle = GameData.GetCamera().GetComponent<CameraController>().IsInCameraFramework();
 
@@ -357,7 +346,10 @@ if (Input.GetKeyDown(KeyCode.Space))
 	void ResultUpdate(){
 		switch(resultPahse.current){
 			case ResultPhase.FIRST:{
-				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()  && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (resultPahse.IsFirst()){
+					Time.timeScale = SKILLBATTLE_ANIMATION_TIME;
+				}
+				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()  && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.SECOND);
 					resultPahse.Start();
 					return;
@@ -365,7 +357,7 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.SECOND:{
-				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.THIRD);
 					resultPahse.Start();
 					return;
@@ -373,7 +365,7 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.THIRD:{
-				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.FOURTH);
 					resultPahse.Start();
 					return;
@@ -381,10 +373,11 @@ if (Input.GetKeyDown(KeyCode.Space))
 			}
 			break;
 			case ResultPhase.FOURTH:{
-				if (m_Player.GetComponent<PlayerController>().animator.IsEndAllAnm()   && m_Target.transform.GetComponent<EnemyController>().animator.IsEndAllAnm()){
+				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
                         //skillBattleResultEnd = true;
                         m_Player.GetComponent<PlayerController>().isAction = true;
                         m_Target.transform.GetComponent<EnemyController>().isAction =  true;
+						Time.timeScale = 1.0f;
 
                     return;
 				}
@@ -397,16 +390,16 @@ if (Input.GetKeyDown(KeyCode.Space))
 	// バトル中スローコルーチン
 	IEnumerator BattleSlow(){
 		// 減速スロー
-		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP);
+		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP, 1, true);
 		while(speed.MoveNext()){
-			slowSpeed = speed.Current;
+			Time.timeScale = speed.Current;
 			yield return null;
 		}
 		
 		// 最遅スロー維持
 		float time = 0.0f;
 		while (time < SLOW_KEEP_TIME){
-			time += Time.deltaTime;
+			time += Time.unscaledDeltaTime;
 			yield return null;
 		}
 
@@ -414,45 +407,13 @@ if (Input.GetKeyDown(KeyCode.Space))
 		yield return null;
 
 		// 加速スロー
-        speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP);
+        speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP, 1, true);
         while (speed.MoveNext())
         {
-            slowSpeed = speed.Current;
+            Time.timeScale = speed.Current;
             yield return null;
         }
 
-        slowSpeed = 1.0f;
+        Time.timeScale = 1.0f;
 	}
-
-	// バトルカード選択中コルーチン
-	IEnumerator Choice(){
-		// 減速スロー
-		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP);
-		while(speed.MoveNext()){
-			slowSpeed = speed.Current;
-			yield return null;
-		}
-		
-		// 最遅スロー維持
-		float time = 0.0f;
-		while (time < SLOW_KEEP_TIME){
-			time += Time.deltaTime;
-			yield return null;
-		}
-
-	}
-
-    // バトルプレイ中コルーチン
-    IEnumerator Play(){
-
-        // 加速スロー
-        IEnumerator<float> speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP);
-        while (speed.MoveNext())
-        {
-            slowSpeed = speed.Current;
-            yield return null;
-        }
-
-        slowSpeed = 1.0f;
-    }
 }

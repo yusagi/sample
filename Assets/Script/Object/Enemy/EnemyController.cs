@@ -22,7 +22,7 @@ public class EnemyController : MonoBehaviour {
 	// カラー
 	public Color color = new Color(255, 81, 81, 255);
 	// コンポーネント
-	public AnimatorChecker animator;
+	public AnimationController m_AnmController;
 	// 付属クラス
 	public Rigidbody_grgr rigidbody;
 	public SkillManager skillManager{get;set;}
@@ -60,7 +60,7 @@ public class EnemyController : MonoBehaviour {
 
 		transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 
-		animator = GetComponent<AnimatorChecker>();
+		m_AnmController = GetComponent<AnimationController>();
 
 		ascensionTimer = ASCENSION_TIME;
 		
@@ -80,13 +80,15 @@ public class EnemyController : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		rigidbody.prevPosition = transform.position;
-
+		
 		state.Start();
 		switch(state.current){
 			// 移動
 			case State.MOVE:{
-				animator.m_Animator.SetBool("Run", true);
-				Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				if (state.IsFirst()){
+					m_AnmController.ChangeAnimationLoop("Run", 0.1f, 0);
+				}
+				Move(transform.forward * speed * Time.deltaTime, 0.0f);
 			}
 			break;
 			// 昇天
@@ -125,7 +127,7 @@ public class EnemyController : MonoBehaviour {
 	void AscensionIni(Vector3 impact){
 		rigidbody.isMove = true;
 		rigidbody.velocity = impact;
-		animator.m_Animator.Play("DamageDown");
+		m_AnmController.ChangeAnimation("DamageDown", 0.1f, 0, 1);
 	}
 
 	// 昇天
@@ -135,7 +137,7 @@ public class EnemyController : MonoBehaviour {
 			rigidbody.isMove = false;
 			transform.rotation = Random.rotation;
 			ascensionTimer = ASCENSION_TIME;
-			animator.m_Animator.Play("Idle");
+			m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
 			hp = 100;
 			state.Change(State.MOVE);
 		}
@@ -156,8 +158,7 @@ public class EnemyController : MonoBehaviour {
 					if (BattleManager._instance.battle.IsFirst()){
 						return;
 					}
-					animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-					Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+					Move(transform.forward * speed * Time.deltaTime, 0.0f);
 				}
 				break;
 				// スキルバトルプレイ
@@ -168,22 +169,16 @@ public class EnemyController : MonoBehaviour {
 					   
                         return;
 					}
-					
-					if (!isActionStart){
-                    	animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-					}
 				}
 				break;
 				// スキルバトル終了
 				case BattleManager.Battle.SKILL_BATTLE_END:{
-					animator.m_Animator.speed = BattleManager._instance.slowSpeed;
-					Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+					Move(transform.forward * speed * Time.deltaTime, 0.0f);
 				}
 				break;
 				// バトル終了
 				case BattleManager.Battle.BATTLE_END:{
 					if (BattleManager._instance.battle.IsFirst()){
-						animator.m_Animator.speed = 1.0f;
 
 						// hpが0
 						if (hp <= 0){
@@ -192,7 +187,6 @@ public class EnemyController : MonoBehaviour {
 							state.Change(State.ASCENSION);
 						}
 						else{
-							//animator.m_Animator.Play("Idle");
 							state.Change(State.MOVE);
 						}
 					}
@@ -238,16 +232,20 @@ public class EnemyController : MonoBehaviour {
 		switch(controller.GetAnimationType(resultPhase, SkillChoiceBoardController.DataType.ENEMY)){
 			case AnimationType.NORMAL_ATTACK:{
 				SkillData data = controller.GetSkillData(resultPhase, SkillChoiceBoardController.DataType.ENEMY);
-				animator.Play(data._anmName);
+				m_AnmController.ChangeAnimation(data._anmName, 0.1f, 0, 1);
 				damage = data._attack;
 			}
 			break;
 			case AnimationType.COUNTER_ATTACK:{
 				SkillData data = controller.GetSkillData(resultPhase, SkillChoiceBoardController.DataType.PLAYER);
-				animator.Play("Land", 0.4f);
-				animator.Play("Rising_P");
+				m_AnmController.ChangeAnimation("Land", 0.1f, 0, 0.3f);
+				m_AnmController.ChainAnimation(new AnmData("Rising_P", 0.1f, 0, 1));
 				damage = data._attack;
 				hp += damage;
+			}
+			break;
+			case AnimationType.NONE:{
+				m_AnmController.SetAnmState(AnmState.END);
 			}
 			break;
 		}
@@ -285,7 +283,7 @@ public class EnemyController : MonoBehaviour {
         float t = 0.0f;
         while(t < 1f)
         {
-            t += (Time.deltaTime / time) * animator.m_Animator.speed;
+            t += (Time.deltaTime / time);
             t = Mathf.Min(t, 1.0f);
 
             // 移動
@@ -305,7 +303,6 @@ public class EnemyController : MonoBehaviour {
                 if (!isActionStart)
                 {
                     isActionStart = true;
-					animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
                 }
                 while (!isAction)
                 {
@@ -319,7 +316,6 @@ public class EnemyController : MonoBehaviour {
 
         isActionStart = false;
         isAction = false;
-        animator.m_Animator.Play("Idle");
 
         rigidbody.velocity = transform.forward * speed;
 
@@ -336,10 +332,9 @@ public class EnemyController : MonoBehaviour {
 			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Player.GetComponent<PlayerController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
-				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
 			}
 			else{
-				Move(transform.forward * speed * Time.deltaTime * animator.m_Animator.speed, 0.0f);
+				Move(transform.forward * speed * Time.deltaTime, 0.0f);
 				yield return null;
 			}
 		}
@@ -351,14 +346,12 @@ public class EnemyController : MonoBehaviour {
 
 		isActionStart = false;
 		isAction = false;
-        animator.m_Animator.Play("Idle");
 		BattleManager._instance.battlePlayflags[1] = true;
 	}
 
 	// 背面バトル
 	public IEnumerator BackBattle(){
-		animator.m_Animator.SetBool("Run", false);
-		animator.m_Animator.Play("Idle");
+		m_AnmController.ChangeAnimationLoop("Run", 0.1f, 0);
 		Vector3 toPlayer = GameManager.m_Player.transform.position - transform.position;
 		Vector3 front = Vector3.ProjectOnPlane(toPlayer, transform.up).normalized;
 		transform.rotation = Quaternion.LookRotation(front, transform.up);
@@ -367,7 +360,6 @@ public class EnemyController : MonoBehaviour {
 			float distance = Vector3.Distance(rigidbody.prevPosition, GameManager.m_Player.GetComponent<PlayerController>().rigidbody.prevPosition);
 			if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE){
 				isActionStart = true;
-				animator.m_Animator.speed = BattleManager.SKILLBATTLE_ANIMATION_TIME;
 			}
 			else{
 				yield return null;
@@ -381,7 +373,6 @@ public class EnemyController : MonoBehaviour {
 
 		isActionStart = false;
 		isAction = false;
-		animator.m_Animator.Play("Idle");
 		BattleManager._instance.battlePlayflags[1] = true;
 	}
 #endregion
