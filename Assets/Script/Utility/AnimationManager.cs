@@ -29,7 +29,7 @@ using UnityEngine;
 		public float _endTime;
 	}
 
-public class AnimationController : MonoBehaviour {
+public class AnimationManager : MonoBehaviour {
 	// メンバ変数
 	private Animator m_Animator;			// アニメーター
 	private AnmState m_AnmState;			// アニメーション状態
@@ -93,6 +93,29 @@ public class AnimationController : MonoBehaviour {
 	public AnmState GetState(){
 		return m_AnmState;
 	}
+
+	// アニメーター取得
+	public Animator GetAnimator(){
+		return m_Animator;
+	}
+
+    // フレームカウントを取得
+    //public int[] GetFrameCount()
+    //{
+    //    AnimatorClipInfo[] ac = m_Animator.GetCurrentAnimatorClipInfo(0);
+    //    float[] length = new float[ac.Length];
+    //    for(int i = 0; i < ac.Length; i++)
+    //    {
+    //        length[i] = ac[i].clip.length;
+    //    }
+
+    //    ac[0].clip.
+    //    float[] currentTime = new float[ac.Length];
+    //    for (int i = 0; i < ac.Length; i++)
+    //    {
+    //        currentTime[i] = 
+    //    }
+    //}
 
 	// アニメーション状態遷移コルーチン
 	private IEnumerator playAnimation(){

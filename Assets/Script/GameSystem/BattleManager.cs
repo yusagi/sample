@@ -57,8 +57,6 @@ public class BattleManager : MonoBehaviour {
     public bool skillBattlePlayEnd { get; set; }
 	private bool battleStart{get;set;}
 
-    public Dictionary<int, bool> battlePlayflags = new Dictionary<int, bool>();
-
 	// タイマー
 	float battleInterval = -1;
 
@@ -69,7 +67,9 @@ public class BattleManager : MonoBehaviour {
 	public float SLOW_START_TIME = 2.0f;
 	public float SLOW_KEEP_TIME = 1.0f;
 	public float SLOW_END_TIME = 2.0f;
-	public float slowSpeed{get;set;}
+
+    // コルーチン
+    private Coroutine m_BattleSlow;
 
 	// デバグ
 	public bool DBG_IS_CAMERA_STOP = false;
@@ -111,8 +111,6 @@ public class BattleManager : MonoBehaviour {
         skillBattleStartEnd = false;
         skillBattlePlayEnd = false;
         battleStart = false;
-        battlePlayflags.Clear();
-        slowSpeed = SLOW_START;
         BattleBoardData.Initialize();
     }
 	
@@ -121,7 +119,7 @@ public class BattleManager : MonoBehaviour {
 		if (battleInterval > 0){
 			battleInterval -= Time.deltaTime;
 		}
-		hps.text = "Player " + m_Player.GetComponent<PlayerController>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<EnemyController>().hp;
+		hps.text = "Player " + m_Player.GetComponent<GrgrCharCtrl>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<GrgrCharCtrl>().hp;
 	}
 
 	void LateUpdate(){
@@ -163,7 +161,7 @@ public class BattleManager : MonoBehaviour {
 				SkillChoiceBoardController skillChoiceBoard = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
 				if (battle.IsFirst()){
                         // プレイヤーカード生成
-                        PlayerController player = m_Player.GetComponent<PlayerController>();
+                        GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
                         int pCardNum = player.skillManager.GetSkillCards().Count;
                         for (int i = 0; i < MAX_CHOICES; i++)
                         {
@@ -176,10 +174,13 @@ public class BattleManager : MonoBehaviour {
 
 
                         // プレイヤーのAPを設定
-                        skillChoiceBoard.m_PlayerAP = (int)(m_Player.GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f);
+                        skillChoiceBoard.m_PlayerAP = (int)(m_Player.GetComponent<GrgrCharCtrl>().rigidbody.GetSpeed() * 3.6f);
 
                         // カード選択コルーチンスタート
-                        StartCoroutine(BattleSlow());
+                        m_BattleSlow = StartCoroutine(BattleSlow());
+
+                        // ログ消去
+                        Dbg.ClearConsole();
 				}
 
 				// APUI表示
@@ -194,11 +195,11 @@ public class BattleManager : MonoBehaviour {
 					if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoices(SkillChoiceBoardController.DataType.PLAYER).Count > 0)
 					{
 						// 敵カード選択
-						EnemyController enemy = m_Target.transform.GetComponent<EnemyController>();
-						int eCardNum = enemy.skillManager.GetSkillCards().Count;
+						GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
+						int eCardNum = target.skillManager.GetSkillCards().Count;
 						for (int i = 0; i < MAX_CHOICES; i++)
 						{
-							BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(enemy.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], SkillChoiceBoardController.DataType.ENEMY);
+							BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], SkillChoiceBoardController.DataType.ENEMY);
 						}
 
 						// バトル状態設定
@@ -209,12 +210,12 @@ public class BattleManager : MonoBehaviour {
 						Vector3 eFront = Vector3.ProjectOnPlane(m_Target.transform.forward, up).normalized;
 						float angle = Mathf.Acos(Vector3.Dot(pFront, eFront)) * Mathf.Rad2Deg;
 						if (angle <= 45.0f){
-							m_Target.transform.GetComponent<EnemyController>().battle = m_Target.transform.GetComponent<EnemyController>().BackBattle();
+                                target.battle = target.FrontBattle(m_Player);//.BackBattle();
 						}
 						else{
-							m_Target.transform.GetComponent<EnemyController>().battle = m_Target.transform.GetComponent<EnemyController>().FrontBattle();
+                                target.battle = target.FrontBattle(m_Player);
 						}
-						m_Player.GetComponent<PlayerController>().battle = m_Player.GetComponent<PlayerController>().FrontBattle();
+						m_Player.GetComponent<GrgrCharCtrl>().battle = m_Player.GetComponent<GrgrCharCtrl>().FrontBattle(m_Target);
 						Debug.Log(angle);	
 
 						battle.Change(Battle.SKILL_BATTLE_PLAY);
@@ -239,15 +240,16 @@ public class BattleManager : MonoBehaviour {
                         resultPahse.Change(ResultPhase.FIRST);
                         resultPahse.Start();
                     }
+                    GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+                    GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
 
-				if (battlePlayflags.ContainsValue(false)){
-					if (m_Player.GetComponent<PlayerController>().isActionStart && m_Target.transform.GetComponent<EnemyController>().isActionStart)
-					{
-						ResultUpdate();
-					}
-				}
-				//  SKILL_BATTLE_ENDへ移行
-				else {
+                    if (player.m_IsBattleAnmStart && target.m_IsBattleAnmStart)
+                    {
+                        ResultUpdate();
+                    }
+
+                    //  SKILL_BATTLE_ENDへ移行
+                    if ((player.m_IsBattleAnmStart && target.m_IsBattleAnmStart) && (!player.m_IsBattleAnmPlay && !target.m_IsBattleAnmPlay)) {
 					SkillBattlePlayFin();
 					battle.Change(Battle.BATTLE_END);
 					battle.Start();
@@ -256,21 +258,19 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			// スキルバトル終了
-			case Battle.SKILL_BATTLE_END:{
-				 if (slowSpeed >= 1.0f){
-					battle.Change(Battle.BATTLE_END);
-					battle.Start();
-					return;
-				 }
-			}
-			break;
+			case Battle.SKILL_BATTLE_END:
+                {
+                    battle.Change(Battle.BATTLE_END);
+                    battle.Start();
+                    return;
+                }
 			// バトル終了
 			case Battle.BATTLE_END:{
 				BattleEndFin();
 				battle.Change(Battle.NONE);
 				battle.Start();
+                    return;
 			}
-			break;
 		}
 		battle.Update();
 	}
@@ -286,15 +286,16 @@ public class BattleManager : MonoBehaviour {
 
 		battleStart = tmpIsBattle && battleInterval < 0;
 
+
 		// バトルモード条件
 		if (battleStart){
 			// バトルモード中ならリターン
 			if (battle.current != Battle.NONE){
 				return;
 			}
-			if (m_Target.transform.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION)
+			if (m_Target.transform.GetComponent<GrgrCharCtrl>().state.current == GrgrCharCtrl.State.ASCENSION)
 				return;
-			if (m_Player.GetComponent<PlayerController>().state.current == PlayerController.State.ASCENSION)
+			if (m_Player.GetComponent<GrgrCharCtrl>().state.current == GrgrCharCtrl.State.ASCENSION)
 				return;
 			
 			// バトルエンカウント
@@ -302,10 +303,10 @@ public class BattleManager : MonoBehaviour {
 			battle.Start();
 
 			// プレイヤー、エネミー、カメラがバトルに突入
-			m_Player.GetComponent<PlayerController>().state.Change(PlayerController.State.BATTLE);
-			m_Target.transform.GetComponent<EnemyController>().state.Change(EnemyController.State.BATTLE);
+			m_Player.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
+			m_Target.transform.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
 			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
-		}
+        }
 		else{
 			// 特定フェーズ
 			if (battle.current == Battle.BATTLE_ENCOUNT || battle.current == Battle.SKILL_BATTLE_START){
@@ -327,7 +328,6 @@ public class BattleManager : MonoBehaviour {
 	// SKILL_BATTLE_PLAY終了処理
 	void SkillBattlePlayFin(){
         skillBattlePlayEnd = false;
-		battlePlayflags.Clear();
 	}
 	
 	// BATTLE_END終了処理
@@ -347,9 +347,10 @@ public class BattleManager : MonoBehaviour {
 		switch(resultPahse.current){
 			case ResultPhase.FIRST:{
 				if (resultPahse.IsFirst()){
+                    StopCoroutine(m_BattleSlow);
 					Time.timeScale = SKILLBATTLE_ANIMATION_TIME;
 				}
-				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()  && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()  && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.SECOND);
 					resultPahse.Start();
 					return;
@@ -357,7 +358,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.SECOND:{
-				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.THIRD);
 					resultPahse.Start();
 					return;
@@ -365,7 +366,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.THIRD:{
-				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
 					resultPahse.Change(ResultPhase.FOURTH);
 					resultPahse.Start();
 					return;
@@ -373,12 +374,10 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.FOURTH:{
-				if (m_Player.GetComponent<PlayerController>().m_AnmController.IsAnmEnd()   && m_Target.transform.GetComponent<EnemyController>().m_AnmController.IsAnmEnd()){
-                        //skillBattleResultEnd = true;
-                        m_Player.GetComponent<PlayerController>().isAction = true;
-                        m_Target.transform.GetComponent<EnemyController>().isAction =  true;
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
+                        m_Player.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;
+                        m_Target.transform.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay =  false;
 						Time.timeScale = 1.0f;
-
                     return;
 				}
 			}

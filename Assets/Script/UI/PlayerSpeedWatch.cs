@@ -30,6 +30,6 @@ public class PlayerSpeedWatch : MonoBehaviour {
         {
             return;
         }
-        m_CurrentSpeed.text = (int)(m_Player.GetComponent<PlayerController>().rigidbody.GetSpeed() * 3.6f) + "km";
+        m_CurrentSpeed.text = (int)(m_Player.GetComponent<GrgrCharCtrl>().rigidbody.GetSpeed() * 3.6f) + "km";
 	}
 }

@@ -46,7 +46,7 @@ public class PillerGenerator : MonoBehaviour {
 	bool PillerGenerate(){
 			transform.rotation = Random.rotation;
 			RaycastHit hitInfo;
-			Physics.Raycast(transform.position, transform.up, out hitInfo, Mathf.Infinity, (int)Layer.PLAYER);
+			Physics.Raycast(transform.position, transform.up, out hitInfo, Mathf.Infinity, (int)LayerMask.PLAYER);
 			if (hitInfo.collider != null){
 				return false;
 			}

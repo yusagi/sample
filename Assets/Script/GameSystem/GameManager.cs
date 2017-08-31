@@ -18,13 +18,16 @@ public class GameManager : MonoBehaviour {
         m_Planet.transform.SetParent(transform, true);
 
         // プレイヤー
-        m_Player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
+        m_Player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
         m_Player.name = "Player";
+        m_Player.layer = (int)Layer.PLAYER;
         m_Player.transform.SetParent(transform, true);
 
         // エネミー
-        m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Enemy"));
+        m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
         m_Enemy.name = "Enemy";
+        m_Enemy.layer = (int)Layer.ENEMY;
+        m_Enemy.transform.rotation = Quaternion.AngleAxis(180.0f, Vector3.right) * Quaternion.identity;
         m_Enemy.transform.SetParent(transform, true);
 
         // ピラー
@@ -51,53 +54,85 @@ public class GameManager : MonoBehaviour {
         PlayerUpdate();
 
         // エネミー更新
-        //EnemyUpdate();
+        EnemyUpdate();
 	}
 
     void PlayerUpdate()
     {
         // プレイヤー
-        PlayerController playerController = m_Player.GetComponent<PlayerController>();
+        GrgrCharCtrl GrgrCharCtrl = m_Player.GetComponent<GrgrCharCtrl>();
         TouchType touchType = TouchController.GetTouchType();
-        playerController.m_TouchType = touchType;
+        if (touchType == TouchType.Drag){
+            touchType = (TouchController.IsFlickSuccess()) ? TouchType.None : TouchType.Drag;
+        }
         if (TouchController.IsPlanetTouch())
         {
-            playerController.m_CurrentVelocity = -TouchController.GetVelocity(touchType);
+            if (touchType == TouchType.Drag){
+                GrgrCharCtrl.m_CurrentVelocity = -TouchController.GetDragVelocity();
+            }
+            else if (touchType == TouchType.Frick){
+                GrgrCharCtrl.m_CurrentVelocity = -TouchController.GetFlickVelocity();
+            }
+            GrgrCharCtrl.m_TouchType = touchType;
         }
         else
         {
-            playerController.m_CurrentVelocity = Vector3.zero;
+            GrgrCharCtrl.m_CurrentVelocity = Vector3.zero;
+            GrgrCharCtrl.m_TouchType = TouchType.None;
         }
-        playerController.m_CurrentRotate = Camera.main.transform.rotation;
+        GrgrCharCtrl.m_CurrentRotate = Camera.main.transform.rotation;
 
-        if (playerController.state.current == PlayerController.State.FLICK_MOVE)
+        if (GrgrCharCtrl.state.current == GrgrCharCtrl.State.FLICK_MOVE)
         {
             // ビタ止め移行モーション変化
             {
                 if (TouchController.IsPlanetTouch())
                 {
-                    if (TouchController.GetTouchTimer() > playerController.MOVE_TOUCH_STOP_TIME * 0.5f){
-                         playerController.m_AnmController.ChangeAnimationLoop("Idle", 0.1f, 0);
+                    if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME * 0.5f){
+                         GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoop("Idle", 0.1f, 0);
                     }
                     else{
-                         playerController.m_AnmController.ChangeAnimationLoop("Run", 0.1f, 0);
+                         GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoop("Run", 0.1f, 0);
                     }
 
-                    if (TouchController.GetTouchTimer() > playerController.MOVE_TOUCH_STOP_TIME)
+                    if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME)
                     {
-                        playerController.m_TouchStopFlag = true;
+                        GrgrCharCtrl.m_TouchStopFlag = true;
                     }
                 }
             }
         }
     }
 
+    private float FRICK_TIMER = 1.0f;
+    private int FRICK_COUNT = 10;
+    private int m_FrickCount = 0;
+    private float m_FrickTimer = 0.0f;
+    private Vector3 m_CurrentVelocity;
+
     void EnemyUpdate()
     {
-        PlayerController enemyController = m_Enemy.GetComponent<PlayerController>();
-        TouchType touchType = TouchType.Frick;
-        enemyController.m_TouchType = touchType;
-        enemyController.m_CurrentVelocity = Vector3.forward * 0.1f;
-        enemyController.m_CurrentRotate = enemyController.transform.rotation;
+        GrgrCharCtrl enemyController = m_Enemy.GetComponent<GrgrCharCtrl>();
+        enemyController.m_TouchType = TouchType.None;
+
+        if (m_FrickTimer > 0)
+        {
+            m_FrickTimer -= Time.deltaTime;
+            enemyController.m_CurrentVelocity = Vector3.zero;
+        }
+        else
+        {
+            if (m_FrickCount == 0)
+            {
+                m_FrickCount = FRICK_COUNT;
+                enemyController.transform.rotation = Quaternion.AngleAxis(Random.Range(0.0f, 359.0f), enemyController.transform.up) * enemyController.transform.rotation;
+            }
+
+            enemyController.m_CurrentVelocity = Vector3.forward * 1080.0f;
+            enemyController.m_CurrentRotate = enemyController.transform.rotation;
+            m_FrickCount -= 1;
+            m_FrickTimer = FRICK_TIMER;
+            enemyController.m_TouchType = TouchType.Frick;
+        }
     }
 }

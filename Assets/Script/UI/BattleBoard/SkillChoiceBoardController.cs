@@ -13,8 +13,11 @@ public class SkillChoiceBoardController : MonoBehaviour {
 	List<GameObject> m_Cards = new List<GameObject>();
 	List<SkillData> m_PlayerChoices = new List<SkillData>();
 	List<SkillData> m_EnemyChoices = new List<SkillData>();
+    Dictionary<GameObject, List<SkillData>> m_ChoiceSkills = new Dictionary<GameObject, List<SkillData>>();
 	Dictionary<BattleManager.ResultPhase, AnimationType> m_PlayerResult = new Dictionary<BattleManager.ResultPhase, AnimationType>();
 	Dictionary<BattleManager.ResultPhase, AnimationType> m_EnemyResult = new Dictionary<BattleManager.ResultPhase, AnimationType>();
+    Dictionary<GameObject, Dictionary<BattleManager.ResultPhase, AnimationType>> m_ResultAnms = new Dictionary<GameObject, Dictionary<BattleManager.ResultPhase, AnimationType>>();
+
 	public int m_PlayerAP{get;set;}
 	public int m_EnemyAP{get;set;}
 
@@ -22,8 +25,11 @@ public class SkillChoiceBoardController : MonoBehaviour {
 		m_Cards.Clear();
 		m_PlayerChoices.Clear();
 		m_EnemyChoices.Clear();
-		m_PlayerResult.Clear();
+        m_ChoiceSkills.Clear();
+
+        m_PlayerResult.Clear();
 		m_EnemyResult.Clear();
+        m_ResultAnms.Clear();
 	}
 
 	// Use this for initialization
@@ -37,8 +43,6 @@ public class SkillChoiceBoardController : MonoBehaviour {
 	}
 
 	public void Battle(){
-		//SkillManager player = GameData.GetPlayer().GetComponent<PlayerController>().skillManager;
-		//SkillManager enemy = GameData.GetEnemy().GetComponent<EnemyController>().skillManager;
 		m_PlayerResult.Clear();
 		m_EnemyResult.Clear();
 		
@@ -57,8 +61,14 @@ public class SkillChoiceBoardController : MonoBehaviour {
 			string name2 = (eData == null) ? null : eData._name;
 
 			Debug.Log(name1 + " vs " + name2);
-		}
-	}
+        }
+
+        m_ChoiceSkills.Add(GameManager.m_Player, m_PlayerChoices);
+        m_ChoiceSkills.Add(GameManager.m_Enemy, m_EnemyChoices);
+
+        m_ResultAnms.Add(GameManager.m_Player, m_PlayerResult);
+        m_ResultAnms.Add(GameManager.m_Enemy, m_EnemyResult);
+    }
 
 	public void AddCardObject(GameObject card){
 		int num = m_Cards.Count;
@@ -115,35 +125,39 @@ public class SkillChoiceBoardController : MonoBehaviour {
         }
     }
 
-	public AnimationType GetAnimationType(BattleManager.ResultPhase pahse, DataType type){
-		
-		switch(type){
-			case DataType.PLAYER:{
-				return m_PlayerResult[pahse];
-			}
-			case DataType.ENEMY:{
-				return m_EnemyResult[pahse];
-			}
-			default:{
-				Debug.LogError("out of range GetAnimationTyp");
-				return AnimationType.NONE;
-			}
-		}
+	public AnimationType GetAnimationType(GameObject my, BattleManager.ResultPhase pahse){
+
+        return (m_ResultAnms[my])[pahse];
+
+		//switch(type){
+		//	case DataType.PLAYER:{
+		//		return m_PlayerResult[pahse];
+		//	}
+		//	case DataType.ENEMY:{
+		//		return m_EnemyResult[pahse];
+		//	}
+		//	default:{
+		//		Debug.LogError("out of range GetAnimationTyp");
+		//		return AnimationType.NONE;
+		//	}
+		//}
 	}
 
-	public SkillData GetSkillData(BattleManager.ResultPhase pahse, DataType type){
-		switch(type){
-			case DataType.PLAYER:{
-				return m_PlayerChoices[(int)pahse];
-			}
-			case DataType.ENEMY:{
-				return m_EnemyChoices[(int)pahse];
-			}
-			default:{
-				Debug.LogError("out of range GetSkillData");
-				return null;
-			}
-		}
+	public SkillData GetSkillData(GameObject my, BattleManager.ResultPhase pahse){
+
+        return m_ChoiceSkills[my][(int)pahse];
+		//switch(type){
+		//	case DataType.PLAYER:{
+		//		return m_PlayerChoices[(int)pahse];
+		//	}
+		//	case DataType.ENEMY:{
+		//		return m_EnemyChoices[(int)pahse];
+		//	}
+		//	default:{
+		//		Debug.LogError("out of range GetSkillData");
+		//		return null;
+		//	}
+		//}
 	}
 
 	public void End(){
@@ -153,8 +167,10 @@ public class SkillChoiceBoardController : MonoBehaviour {
 		m_Cards.Clear();
 		m_PlayerChoices.Clear();
 		m_EnemyChoices.Clear();
+        m_ChoiceSkills.Clear();
 		m_PlayerResult.Clear();
 		m_EnemyResult.Clear();
+        m_ResultAnms.Clear();
 	}
 
 	void SkillBattleResult(BattleManager.ResultPhase pahse, SkillData pData, SkillData eData){

@@ -35,7 +35,7 @@ public class InputManager : SingletonBefaviour<InputManager>
     {
         Ray ray = Camera.main.ScreenPointToRay(touchStartPos);
         RaycastHit hit;
-        isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)Layer.PLANET);
+        isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)LayerMask.PLANET);
 
         if (isTouchUp)
         {

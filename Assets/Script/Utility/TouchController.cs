@@ -58,7 +58,7 @@ public class TouchController : MonoBehaviour {
 		if (isDrag){
 			Ray ray = Camera.main.ScreenPointToRay(touchStartPos);
 			RaycastHit hit;
-			isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)Layer.PLANET);
+			isPlanetTouch = Physics.Raycast(ray, out hit, Mathf.Infinity, (int)LayerMask.PLANET);
 		}
 		else{
 			isPlanetTouch = false;
@@ -175,7 +175,7 @@ public class TouchController : MonoBehaviour {
 	
 	public static Vector3 GetDragVelocity(){
 
-		if (isDrag && touchTimer > 0 && !IsFlickSuccess()){
+		if (isDrag && touchTimer > 0){
 			return new Vector3 (currentDragPos.x - prevDragPos.x,
 								0.0f,
 								currentDragPos.y - prevDragPos.y);

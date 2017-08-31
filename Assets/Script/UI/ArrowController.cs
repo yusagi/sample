@@ -37,7 +37,7 @@ public class ArrowController : MonoBehaviour {
 		Transform target = GameManager.m_Enemy.transform;
 		Transform player = GameManager.m_Player.transform;
 
-		if (target.GetComponent<EnemyController>().state.current == EnemyController.State.ASCENSION){
+		if (target.GetComponent<GrgrCharCtrl>().state.current == GrgrCharCtrl.State.ASCENSION){
 			arrow.enabled = false;
 			return;
 		}

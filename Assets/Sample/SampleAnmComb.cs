@@ -4,13 +4,13 @@ using UnityEngine;
 
 public class SampleAnmComb : MonoBehaviour {
 
-	private AnimationController m_AnmController;
+	private AnimationManager m_AnmMgr;
 	private Coroutine m_AnmCor = null;
 	public float slowTime = 1.0f;
 
 	// Use this for initialization
 	void Start () {
-		m_AnmController = GetComponent<AnimationController>();
+		m_AnmMgr = GetComponent<AnimationManager>();
 	}
 	
 	// Update is called once per frame
@@ -25,44 +25,55 @@ public class SampleAnmComb : MonoBehaviour {
 	}
 
 	IEnumerator AnmComb(){
-		m_AnmController.ChangeAnimation("Jab", 0.068f, 0, 1);
+        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
+        yield return null;
+        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
+        yield return null;
+        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
+        yield return null;
+        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
+        yield return null;
+        m_AnmMgr.ChangeAnimationLoop("Run", 0, 0);
+        yield break;
 
-		m_AnmController.ChainAnimation(new AnmData("Hikick", 0.068f, 0, 1));
-		m_AnmController.ChainAnimation(new AnmData("Hikick", 0.068f, 0, 1));
-		m_AnmController.ChainAnimation(new AnmData("Land", 0.068f, 0, 0.3f));
-		m_AnmController.ChainAnimation(new AnmData("Rising_P", 0.1f, 0, 1));
-		m_AnmController.ChainAnimation(new AnmData("Spinkick", 0.068f, 0, 1));
+        m_AnmMgr.ChangeAnimation("Jab", 0.068f, 0, 1);
 
-		while(m_AnmController.GetState() != AnmState.END){
+		m_AnmMgr.ChainAnimation(new AnmData("Hikick", 0.068f, 0, 1));
+		m_AnmMgr.ChainAnimation(new AnmData("Hikick", 0.068f, 0, 1));
+		m_AnmMgr.ChainAnimation(new AnmData("Land", 0.068f, 0, 0.3f));
+		m_AnmMgr.ChainAnimation(new AnmData("Rising_P", 0.1f, 0, 1));
+		m_AnmMgr.ChainAnimation(new AnmData("Spinkick", 0.068f, 0, 1));
+
+		while(m_AnmMgr.GetState() != AnmState.END){
 			yield return null;
 		}
-		m_AnmController.ChangeAnimationLoop("Idle", 0.068f, 0);
+		m_AnmMgr.ChangeAnimationLoop("Idle", 0.068f, 0);
 		yield break;
 
-		m_AnmController.ChangeAnimation("Hikick", 0.068f, 0, 1);
-		while(m_AnmController.GetState() != AnmState.END){
+		m_AnmMgr.ChangeAnimation("Hikick", 0.068f, 0, 1);
+		while(m_AnmMgr.GetState() != AnmState.END){
 			yield return null;
 		}
 
-		m_AnmController.ChangeAnimation("Hikick", 0.068f, 0, 1);
-		while(m_AnmController.GetState() != AnmState.END){
+		m_AnmMgr.ChangeAnimation("Hikick", 0.068f, 0, 1);
+		while(m_AnmMgr.GetState() != AnmState.END){
 			yield return null;
 		}
 
-		m_AnmController.ChangeAnimation("Land", 0.068f, 0, 0.3f);
-		while(m_AnmController.GetState() != AnmState.END){
+		m_AnmMgr.ChangeAnimation("Land", 0.068f, 0, 0.3f);
+		while(m_AnmMgr.GetState() != AnmState.END){
 			yield return null;
 		}
-		m_AnmController.ChangeAnimation("Rising_P", 0.1f, 0, 1);
-		while(m_AnmController.GetState() != AnmState.END){
-			yield return null;
-		}
-
-		m_AnmController.ChangeAnimation("Spinkick", 0.068f, 0, 1);
-		while(m_AnmController.GetState() != AnmState.END){
+		m_AnmMgr.ChangeAnimation("Rising_P", 0.1f, 0, 1);
+		while(m_AnmMgr.GetState() != AnmState.END){
 			yield return null;
 		}
 
-		m_AnmController.ChangeAnimationLoop("Idle", 0.068f, 0);
+		m_AnmMgr.ChangeAnimation("Spinkick", 0.068f, 0, 1);
+		while(m_AnmMgr.GetState() != AnmState.END){
+			yield return null;
+		}
+
+		m_AnmMgr.ChangeAnimationLoop("Idle", 0.068f, 0);
 	}
 }

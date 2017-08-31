@@ -9,7 +9,7 @@ public class Rigidbody_grgr {
 	{
 		Vector3 rayStart = planetPosition + (chrUp* (planetRad + 0.1f));
 		RaycastHit hitInfo;
-		Physics.Raycast(rayStart, -chrUp, out hitInfo, Mathf.Infinity, (int)Layer.PLANET);
+		Physics.Raycast(rayStart, -chrUp, out hitInfo, Mathf.Infinity, (int)LayerMask.PLANET);
 
 		Vector3 position = hitInfo.point + (chrUp * up);
 		

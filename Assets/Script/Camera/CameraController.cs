@@ -20,6 +20,22 @@ public class CameraController : MonoBehaviour {
 
     #endregion
 
+    #region 定数
+
+    // 通常カメラ
+    public Vector3 NORMAL_OFFSET_POS = new Vector3(0, 3.4f, -7);
+    public float NORMAL_OFFSET_V_ANGLE = 16.5f;
+    public Vector3 NORMAL_OFFSET_BACK_POS = new Vector3(0, 3.4f, -18);
+    public float NORMAL_OFFSET_BACK_V_ANGLE = 16.5f;
+
+    // バトルカメラ突入用仮想カメラ値
+    public Vector3 BATTLE_START_POS = new Vector3(0.0f, 24.0f, -38.0f);
+    public float BATTLE_START_V_ANGLE = 59.0f;
+    public Vector3 BATTLE_START_BACK_POS = new Vector3(0.0f, 3.4f, -77.0f);
+    public float BATTLE_START_BACK_V_ANGLE = -31.0f;
+
+    #endregion
+
     #region メンバ変数
 
     private Transform m_Player;
@@ -39,20 +55,9 @@ public class CameraController : MonoBehaviour {
 	private IEnumerator<float> vRotate;
 	private IEnumerator<Vector3> osPos;
 
-	// 通常カメラ
-	public Vector3 NORMAL_OFFSET_POS = new Vector3(0, 3.4f, -7);
-	public float NORMAL_OFFSET_V_ANGLE = 16.5f;
-	public Vector3 NORMAL_OFFSET_BACK_POS = new Vector3(0, 3.4f, -18);
-	public float NORMAL_OFFSET_BACK_V_ANGLE = 16.5f;
-
-	// バトルカメラ
-	public Vector3 BATTLE_OFFSET_POS;
-	public float BATTLE_OFFSET_V_ANGLE;
-
-	public Vector3 BATTLE_START_POS;
-	public float BATTLE_START_V_ANGLE;
-	public Vector3 BATTLE_START_BACK_POS;
-	public float BATTLE_START_BACK_V_ANGLE;
+    // バトルカメラ
+    public Vector3 m_BattleOffsetPos { get; set; }
+	public float m_BattleOffsetVAngle { get; set; }
 
 	public bool battleCameraControlleComp{get;set;}
 
@@ -131,10 +136,10 @@ public class CameraController : MonoBehaviour {
 				if (phase.IsFirst()){
 					float vAngle = 0.0f;
 					Vector3 offset = Vector3.zero;
-					BATTLE_OFFSET_V_ANGLE = offsetVAngle;
-					BATTLE_OFFSET_POS = offsetPos;
-					vRotate = UtilityMath.FLerp(offsetVAngle, BATTLE_OFFSET_V_ANGLE);
-					osPos = UtilityMath.VLerp(osPos.Current, BATTLE_OFFSET_POS);
+					m_BattleOffsetVAngle = offsetVAngle;
+					m_BattleOffsetPos = offsetPos;
+					vRotate = UtilityMath.FLerp(offsetVAngle, m_BattleOffsetVAngle);
+					osPos = UtilityMath.VLerp(osPos.Current, m_BattleOffsetPos);
 				}
 				// バトルモード状態
 				switch(BattleManager._instance.battle.current){
@@ -150,8 +155,8 @@ public class CameraController : MonoBehaviour {
 						bool tmposPos = osPos.MoveNext();
 
 						if (!BattleManager._instance.DBG_IS_CAMERA_STOP || (tmpVRotate && tmposPos)){
-							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : BATTLE_OFFSET_V_ANGLE;
-							offsetPos = osPos.MoveNext() ? osPos.Current : BATTLE_OFFSET_POS;
+							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : m_BattleOffsetVAngle;
+							offsetPos = osPos.MoveNext() ? osPos.Current : m_BattleOffsetPos;
 							SetPose();
 						}
 					}	
@@ -189,7 +194,7 @@ public class CameraController : MonoBehaviour {
 
 	// プレイヤーの進行方向確認
 	DirType CheckDirType(){
-		Vector3 vel =m_Player.GetComponent<PlayerController>().rigidbody.velocity;
+		Vector3 vel =m_Player.GetComponent<GrgrCharCtrl>().rigidbody.velocity;
 		if (vel.magnitude < UtilityMath.epsilon){
 			return DirType.FRONT;
 		}
@@ -250,8 +255,8 @@ public class CameraController : MonoBehaviour {
 			}
 			break;
 			case DirType.BACK:{
-				position = BATTLE_START_BACK_POS;
-				vAngle = BATTLE_START_BACK_V_ANGLE; 
+				position = NORMAL_OFFSET_BACK_POS;
+				vAngle = NORMAL_OFFSET_BACK_V_ANGLE; 
 			}
 			break;
 		}
@@ -275,7 +280,7 @@ public class CameraController : MonoBehaviour {
 
 		Ray ray = Camera.main.ScreenPointToRay(sPos);
 		RaycastHit hit;
-		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(Layer.PLAYER | Layer.PILLER)))){
+		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(LayerMask.PLAYER | LayerMask.PILLER)))){
 			if (hit.collider.tag == "Planet"){
 				result = false;
 			}
