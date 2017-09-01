@@ -90,6 +90,11 @@ public class GrgrCharCtrl : MonoBehaviour
     public Vector3 m_CurrentVelocity { get; set; }
     public Quaternion m_CurrentRotate { get; set; }
     public bool m_TouchStopFlag { get; set; }
+    
+    // デバグ用
+    public State dbg_State;
+    public AnmState dbg_AnmState;
+    public BattleManager.ResultPhase dbg_BattleState;
 
     #endregion
 
@@ -139,11 +144,16 @@ public class GrgrCharCtrl : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        m_AnmMgr.ChangeAnimationLoop("Idle", 0.0f, 0);
     }
 
     // Update is called once per frame
     void Update()
     {
+        dbg_State = state.current;
+        dbg_AnmState = m_AnmMgr.GetState();
+        //dbg_BattleState = BattleManager._instance.resultPahse.current;
+
         // 最大速度を変更
         rigidbody.maxVelocitySpeed = maxSpeed;
 
@@ -155,13 +165,14 @@ public class GrgrCharCtrl : MonoBehaviour
         CharactorUpdata();
     }
 
-
+bool a = false;
 
     #endregion
 
     #region 状態別更新
     void CharactorUpdata()
     {
+        Debug.Log("frameCount" + Time.frameCount);
         state.Start();
         switch (state.current)
         {
@@ -183,6 +194,7 @@ public class GrgrCharCtrl : MonoBehaviour
                     // フリック移動条件
                     else if (m_TouchType == TouchType.Frick)
                     {
+                        Debug.Log("1");
                         Vector3 velocity = FlickVelocity();
                         FlickMove(velocity);
                         state.Change(State.FLICK_MOVE);
@@ -216,8 +228,13 @@ public class GrgrCharCtrl : MonoBehaviour
                 {
                     if (state.IsFirst())
                     {
-                        m_AnmMgr.ChangeAnimationLoop("Run", 0.1f, 0);
+                        Debug.Log("2");
+                        a = true;
                         break;
+                    }
+                    if (a){
+                        a = false;
+                        m_AnmMgr.ChangeAnimationLoop("Run", 0.1f, 0);
                     }
 
                     Vector3 velocity = FlickVelocity();

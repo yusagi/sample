@@ -15,25 +15,41 @@ public class SampleAnmComb : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		Time.timeScale = slowTime;
-		if (Input.GetKeyDown(KeyCode.Z)){
+		if (Input.GetKey(KeyCode.Z)){
+			Dbg.ClearConsole();
 			if (m_AnmCor != null){
 				StopCoroutine(m_AnmCor);
 			}	
 			m_AnmCor = StartCoroutine(AnmComb());
 		}
+
+		if (Input.GetKeyDown(KeyCode.X)){
+			m_AnmMgr.ChangeAnimation("Jab", 0.0f, 0, 1);
+		}
 	}
 
 	IEnumerator AnmComb(){
-        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
-        yield return null;
-        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
-        yield return null;
-        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
-        yield return null;
-        m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
-        yield return null;
-        m_AnmMgr.ChangeAnimationLoop("Run", 0, 0);
+		Time.timeScale = 1.0f; 
+			 
+			 m_AnmMgr.ChangeAnimationLoop("Run", 0.2f, 0);
+			 yield return null;
+			 m_AnmMgr.ChangeAnimation("Jab", 0.2f, 0, 1.0f);
+
+		
+		while(m_AnmMgr.GetState() != AnmState.END){
+			
+			if (m_AnmMgr.GetAnimator().GetCurrentAnimatorClipInfo(0).Length > 0){
+				foreach(var clip in m_AnmMgr.GetAnimator().GetCurrentAnimatorClipInfo(0)){
+					Debug.Log(clip.clip.name);
+				}
+			}
+			else{
+				Debug.Log("NULL");
+			}
+			
+			yield return null;
+		}
+Debug.Log("終了");
         yield break;
 
         m_AnmMgr.ChangeAnimation("Jab", 0.068f, 0, 1);

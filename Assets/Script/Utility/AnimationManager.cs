@@ -35,6 +35,7 @@ public class AnimationManager : MonoBehaviour {
 	private AnmState m_AnmState;			// アニメーション状態
 	private Coroutine m_PlayAnimation;		// アニメーション状態遷移コルーチン
 	private List<AnmData> m_AnmList = new List<AnmData>();		// 再生アニメーションリスト
+	private float m_PrevTime;				// 前フレームのアニメーションのNormalize時間
 	
 	
 	void Awake(){
@@ -42,6 +43,7 @@ public class AnimationManager : MonoBehaviour {
 		m_AnmState = AnmState.NONE;
 		m_PlayAnimation = null;
 		m_AnmList.Clear();
+		m_PrevTime = 0.0f;
 	}
 
 	// アニメーション変更(ループ)
@@ -56,8 +58,7 @@ public class AnimationManager : MonoBehaviour {
 			m_AnmList.Clear();
 		}
 
-		m_Animator.CrossFade(name, duration, layer, duration);
-		m_AnmState = AnmState.LOOP;
+		m_PlayAnimation = StartCoroutine(loopAnimation(name, duration, layer));
 	}
 
 	// アニメーション変更
@@ -87,6 +88,11 @@ public class AnimationManager : MonoBehaviour {
 	// アニメーションが終了状態
 	public bool IsAnmEnd(){
 		return m_AnmState == AnmState.END;
+	}
+
+	// アニメーションがENDかLOOP状態
+	public bool IsAnmEndORLoop(){
+		return (m_AnmState == AnmState.END) || (m_AnmState == AnmState.LOOP);
 	}
 
 	// アニメーション状態取得
@@ -122,21 +128,31 @@ public class AnimationManager : MonoBehaviour {
 		// アニメーションリストの先頭を取得
 		AnmData data = m_AnmList[0];
 
+		// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
+		if (m_AnmState == AnmState.CHANGE){
+			//m_PrevTime = 0.0f;
+			float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+			while(m_PrevTime < tmpCurrent){
+				m_PrevTime = tmpCurrent;
+				yield return null;
+				tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+			}
+		}
+
 		// アニメーション変更
 		m_Animator.CrossFade(data._name, data._duration, data._layer, data._duration);
 
 		// 変更中
 		m_AnmState = AnmState.CHANGE;
-		
-		float prev = 0.0f;
+		m_PrevTime = 0.0f;
 		float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-
-		while(prev < current){
+		while(m_PrevTime < current){
 			yield return null;
-			prev = current;
+			m_PrevTime = current;
 			current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
 		}
-
+		m_PrevTime = 0.0f;
+		
 		// 開始
 		m_AnmState = AnmState.START;
 		yield return null;
@@ -164,5 +180,47 @@ public class AnimationManager : MonoBehaviour {
 		else{
 			m_PlayAnimation = StartCoroutine(playAnimation());
 		}
+	}
+
+	IEnumerator loopAnimation(string name, float duration, int layer){
+
+		// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
+		if (m_AnmState == AnmState.CHANGE){
+			float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+			while(m_PrevTime < tmpCurrent){
+				m_PrevTime = tmpCurrent;
+				yield return null;
+				tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+			}
+
+			// 切り替わったあとに同じアニメーションを再生しようとしてたら終了
+			if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName(name)){
+				m_AnmState = AnmState.LOOP;
+				yield break;
+			}
+		}
+
+		// 開始
+		m_Animator.CrossFade(name, duration, layer);
+
+		// 変更中
+		m_AnmState = AnmState.CHANGE;
+		m_PrevTime = 0.0f;
+		float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+		Debug.Log(m_Animator.GetCurrentAnimatorClipInfo(0)[0].clip.name);
+		Debug.Log(name);
+		Debug.Log(current);
+		while(m_PrevTime < current){
+			yield return null;
+			m_PrevTime = current;
+			current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+		Debug.Log(m_Animator.GetCurrentAnimatorClipInfo(0)[0].clip.name);
+		Debug.Log("prev " + m_PrevTime + " : " + "current" + current);
+		}
+		m_PrevTime = 0.0f;
+		Debug.Log("終了");
+
+		// ループ状態
+		m_AnmState = AnmState.LOOP;
 	}
 }

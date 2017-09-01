@@ -109,9 +109,13 @@ public class GameManager : MonoBehaviour {
     private int m_FrickCount = 0;
     private float m_FrickTimer = 0.0f;
     private Vector3 m_CurrentVelocity;
+    public bool isMove = false;
 
     void EnemyUpdate()
     {
+        if (isMove == false){
+            //return;
+        }
         GrgrCharCtrl enemyController = m_Enemy.GetComponent<GrgrCharCtrl>();
         enemyController.m_TouchType = TouchType.None;
 

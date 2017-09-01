@@ -239,7 +239,7 @@ public class BattleManager : MonoBehaviour {
 					BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle();
                         resultPahse.Change(ResultPhase.FIRST);
                         resultPahse.Start();
-                    }
+                }
                     GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
                     GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
 
@@ -350,7 +350,7 @@ public class BattleManager : MonoBehaviour {
                     StopCoroutine(m_BattleSlow);
 					Time.timeScale = SKILLBATTLE_ANIMATION_TIME;
 				}
-				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()  && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()  && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()){
 					resultPahse.Change(ResultPhase.SECOND);
 					resultPahse.Start();
 					return;
@@ -358,7 +358,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.SECOND:{
-				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()){
 					resultPahse.Change(ResultPhase.THIRD);
 					resultPahse.Start();
 					return;
@@ -366,7 +366,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.THIRD:{
-				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()){
 					resultPahse.Change(ResultPhase.FOURTH);
 					resultPahse.Start();
 					return;
@@ -374,7 +374,7 @@ public class BattleManager : MonoBehaviour {
 			}
 			break;
 			case ResultPhase.FOURTH:{
-				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEnd()){
+				if (m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()   && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop()){
                         m_Player.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;
                         m_Target.transform.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay =  false;
 						Time.timeScale = 1.0f;
