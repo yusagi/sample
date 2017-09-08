@@ -50,7 +50,7 @@ public class SkillChoiceBoardController : MonoBehaviour {
 		int eCardNum = m_EnemyChoices.Count;
 
         int num = 4; //(pCardNum >= eCardNum) ? pCardNum : eCardNum;
-
+		
 		for (int i = 0; i < num; i++){
 			BattleManager.ResultPhase pahse = (BattleManager.ResultPhase)(i);
 			SkillData pData = (i < m_PlayerChoices.Count) ? m_PlayerChoices[i] : null;
@@ -258,5 +258,10 @@ public class SkillChoiceBoardController : MonoBehaviour {
 			}
 			break;
 		}
+	}
+
+	// プレイヤーの選んだ枚数
+	public int GetPlayerChoiceCount(){
+		return m_PlayerChoices.Count;
 	}
 }

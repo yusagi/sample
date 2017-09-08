@@ -90,7 +90,7 @@ public class GrgrCharCtrl : MonoBehaviour
     public Vector3 m_CurrentVelocity { get; set; }
     public Quaternion m_CurrentRotate { get; set; }
     public bool m_TouchStopFlag { get; set; }
-    
+
     // デバグ用
     public State dbg_State;
     public AnmState dbg_AnmState;
@@ -100,8 +100,19 @@ public class GrgrCharCtrl : MonoBehaviour
 
     #region Unity関数
 
+    IEnumerator a()
+    {
+        if (false)
+        {
+            yield return null;
+        }
+        Debug.Log(gameObject.name + " " + A);
+
+    }
+    Coroutine A;
     void Awake()
     {
+
         m_Planet = GameManager.m_Planet;
 
         // スキルマネージャー初期化
@@ -144,7 +155,7 @@ public class GrgrCharCtrl : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        m_AnmMgr.ChangeAnimationLoop("Idle", 0.0f, 0);
+        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
     }
 
     // Update is called once per frame
@@ -152,7 +163,7 @@ public class GrgrCharCtrl : MonoBehaviour
     {
         dbg_State = state.current;
         dbg_AnmState = m_AnmMgr.GetState();
-        //dbg_BattleState = BattleManager._instance.resultPahse.current;
+        dbg_BattleState = BattleManager._instance.resultPahse.current;
 
         // 最大速度を変更
         rigidbody.maxVelocitySpeed = maxSpeed;
@@ -165,14 +176,11 @@ public class GrgrCharCtrl : MonoBehaviour
         CharactorUpdata();
     }
 
-bool a = false;
-
     #endregion
 
     #region 状態別更新
     void CharactorUpdata()
     {
-        Debug.Log("frameCount" + Time.frameCount);
         state.Start();
         switch (state.current)
         {
@@ -182,6 +190,7 @@ bool a = false;
                     if (state.IsFirst())
                     {
                         transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
 
                     // ドラッグ移動条件
@@ -194,7 +203,6 @@ bool a = false;
                     // フリック移動条件
                     else if (m_TouchType == TouchType.Frick)
                     {
-                        Debug.Log("1");
                         Vector3 velocity = FlickVelocity();
                         FlickMove(velocity);
                         state.Change(State.FLICK_MOVE);
@@ -215,7 +223,6 @@ bool a = false;
                         rigidbody.velocity = Vector3.zero;
                         rigidbody.friction = maxFriction;
                         gear = Gear.First;
-                        m_AnmMgr.ChangeAnimationLoop("Idle", 0.1f, 0);
                         state.Change(State.STOP);
                         return;
                     }
@@ -228,13 +235,7 @@ bool a = false;
                 {
                     if (state.IsFirst())
                     {
-                        Debug.Log("2");
-                        a = true;
-                        break;
-                    }
-                    if (a){
-                        a = false;
-                        m_AnmMgr.ChangeAnimationLoop("Run", 0.1f, 0);
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
                     }
 
                     Vector3 velocity = FlickVelocity();
@@ -247,7 +248,6 @@ bool a = false;
                         rigidbody.friction = maxFriction;
                         gear = Gear.First;
                         state.Change(State.STOP);
-                        m_AnmMgr.ChangeAnimationLoop("Idle", 0.1f, 0);
                         m_TouchStopFlag = false;
                         return;
                     }
@@ -401,7 +401,7 @@ bool a = false;
         rigidbody.isMove = true;
         rigidbody.velocity = impact;
         ascensionTimer = ASCENSION_TIME;
-        m_AnmMgr.ChangeAnimation("DamageDown", 0.1f, 0, 1);
+        m_AnmMgr.ChangeAnimationInFixedTime("DamageDown", "Idle");
     }
 
     void Ascension()
@@ -412,7 +412,6 @@ bool a = false;
             rigidbody.isMove = false;
             rigidbody.velocity = Vector3.zero;
             transform.rotation = Random.rotation;
-            m_AnmMgr.ChangeAnimationLoop("Idle", 0.1f, 0);
             hp = 100;
             state.Change(State.STOP);
         }
@@ -496,7 +495,7 @@ bool a = false;
     IEnumerator GearChangeIntervalUpdate()
     {
         m_GearChangeInterval = GEAR_CHANGE_INTERVAL;
-        while(m_GearChangeInterval > 0)
+        while (m_GearChangeInterval > 0)
         {
             m_GearChangeInterval -= Time.deltaTime;
             yield return null;
@@ -586,6 +585,10 @@ bool a = false;
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
                     }
+                    while (m_AnmMgr.IsAnmEnd())
+                    {
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+                    }
                 }
                 break;
             case BattleManager.ResultPhase.SECOND:
@@ -593,6 +596,10 @@ bool a = false;
                     if (BattleManager._instance.resultPahse.IsFirst())
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                    }
+                    while (m_AnmMgr.IsAnmEnd())
+                    {
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
                 }
                 break;
@@ -602,6 +609,10 @@ bool a = false;
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
                     }
+                    while (m_AnmMgr.IsAnmEnd())
+                    {
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+                    }
                 }
                 break;
             case BattleManager.ResultPhase.FOURTH:
@@ -609,6 +620,10 @@ bool a = false;
                     if (BattleManager._instance.resultPahse.IsFirst())
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                    }
+                    while (m_AnmMgr.IsAnmEnd())
+                    {
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
                 }
                 break;
@@ -618,34 +633,136 @@ bool a = false;
     // バトルリザルトセットアニメーション
     void BattleResultSetAnm(GameObject target, SkillChoiceBoardController controller, BattleManager.ResultPhase resultPhase)
     {
+
         int damage = 0;
-        switch (controller.GetAnimationType(gameObject, resultPhase))
+        AnimationType anmType = controller.GetAnimationType(gameObject, resultPhase);
+        switch (anmType)
         {
             case AnimationType.NORMAL_ATTACK:
                 {
                     SkillData data = controller.GetSkillData(gameObject, resultPhase);
-                    m_AnmMgr.ChangeAnimation(data._anmName, 0.1f, 0, 0.8f);
+
+                    // 次に再生するアニメーション名設定
+                    BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
+                    string nextName = null;
+                    if (nextPhase != BattleManager.ResultPhase.END)
+                    {
+                        AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
+                        if (nextType != AnimationType.NONE)
+                        {
+                            if (nextType == AnimationType.COUNTER_ATTACK)
+                            {
+                                nextName = "Land";
+                            }
+                            else
+                            {
+                                nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
+                            }
+                        }
+                        else
+                        {
+                            nextName = "Idle";
+                        }
+                    }
+
+                    // ダメージを受ける場合は処理わけ
+                    string damageName = null;
+                    AnimationType targetType = controller.GetAnimationType(target, resultPhase);
+                    if (targetType == AnimationType.NORMAL_ATTACK || targetType == AnimationType.COUNTER_ATTACK)
+                    {
+                        //damageName = "DAMAGED00";
+                    }
+
+                    if (string.IsNullOrEmpty(damageName))
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, nextName);
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, damageName);
+                        m_AnmMgr.ChainAnimation(damageName, nextName);
+                    }
+
                     damage = data._attack;
                 }
                 break;
             case AnimationType.COUNTER_ATTACK:
                 {
                     SkillData data = controller.GetSkillData(gameObject, resultPhase);
-                    m_AnmMgr.ChangeAnimation("Land", 0.1f, 0, 0.3f);
-                    m_AnmMgr.ChainAnimation(new AnmData("Rising_P", 0.1f, 0, 1));
+
+                    // 次に再生するアニメーション名設定
+                    BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
+                    string nextName = null;
+                    if (nextPhase != BattleManager.ResultPhase.END)
+                    {
+                        AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
+                        if (nextType != AnimationType.NONE)
+                        {
+                            if (nextType == AnimationType.COUNTER_ATTACK)
+                            {
+                                nextName = "Land";
+                            }
+                            else
+                            {
+                                nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
+                            }
+                        }
+                        else
+                        {
+                            nextName = "Idle";
+                        }
+                    }
+
+                    m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
+                    m_AnmMgr.ChainAnimation("RISING_P", nextName);
                     damage = data._attack;
                     hp += damage;
                 }
                 break;
             case AnimationType.NONE:
                 {
-                    m_AnmMgr.ChangeAnimationLoop("Idle", 0, 0);
-                    m_AnmMgr.SetAnmState(AnmState.END);
+                    string damageName = null;
+                    AnimationType targetType = controller.GetAnimationType(target, resultPhase);
+                    if (targetType == AnimationType.NORMAL_ATTACK || targetType == AnimationType.COUNTER_ATTACK)
+                    {
+                        //damageName = "DAMAGED00";
+                    }
+                    
+                    if (string.IsNullOrEmpty(damageName))
+                    {
+                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+                    }
+                    else
+                    {
+                        // 次に再生するアニメーション名設定
+                        BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
+                        string nextName = null;
+                        if (nextPhase != BattleManager.ResultPhase.END)
+                        {
+                            AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
+                            if (nextType != AnimationType.NONE)
+                            {
+                                if (nextType == AnimationType.COUNTER_ATTACK)
+                                {
+                                    nextName = "Land";
+                                }
+                                else
+                                {
+                                    nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
+                                }
+                            }
+                            else
+                            {
+                                nextName = "Idle";
+                            }
+                        }
+                        m_AnmMgr.ChangeAnimationInFixedTime(damageName, nextName);
+                    }
                 }
                 break;
         }
 
-       target.GetComponent<GrgrCharCtrl>().hp -= damage;
+        target.GetComponent<GrgrCharCtrl>().hp -= damage;
     }
 
     // シャンプバトル
@@ -736,6 +853,39 @@ bool a = false;
             {
                 rigidbody.velocity = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized * rigidbody.GetSpeed();
                 GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
+                yield return null;
+            }
+        }
+
+        while (m_IsBattleAnmPlay)
+        {
+            BattleResultUpdate(target.gameObject);
+            yield return null;
+        }
+
+        m_IsBattleAnmStart = false;
+    }
+
+    // 背面バトル
+    public IEnumerator BackBattle(Transform target)
+    {
+        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+        yield return null;
+        
+        Vector3 toTarget = target.position - transform.position;
+        Vector3 front = Vector3.ProjectOnPlane(toTarget, transform.up).normalized;
+        transform.rotation = Quaternion.LookRotation(front, transform.up);
+
+        while (!m_IsBattleAnmStart)
+        {
+            float distance = Vector3.Distance(rigidbody.prevPosition, target.GetComponent<GrgrCharCtrl>().rigidbody.prevPosition);
+            if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE)
+            {
+                m_IsBattleAnmStart = true;
+                m_IsBattleAnmPlay = true;
+            }
+            else
+            {
                 yield return null;
             }
         }

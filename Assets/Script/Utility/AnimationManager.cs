@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
 	// 再生状態
 	public enum AnmState{
+        GET_NAME,
 		CHANGE,
 		START,
 		PLAY,
@@ -13,29 +13,31 @@ using UnityEngine;
 		NONE,
 	}
 
-	// アニメーションデータ
-	public class AnmData{
-
-		public AnmData(string name, float duration, int layer, float endTime){
-			_name = name;
-			_duration = duration;
-			_layer = layer;
-			_endTime = endTime;
-		}
-
-		public string _name;
-		public float _duration;
-		public int _layer;
-		public float _endTime;
-	}
-
 public class AnimationManager : MonoBehaviour {
+
+    private class ChainAnmData
+    {
+        public ChainAnmData(string name, string nextName)
+        {
+            _name = name;
+            _nextName = nextName;
+        }
+        public string _name;
+        public string _nextName;
+    }
+
+	// 定数
+	public static float FRAME_RATE = 60.0f;
+
 	// メンバ変数
 	private Animator m_Animator;			// アニメーター
 	private AnmState m_AnmState;			// アニメーション状態
 	private Coroutine m_PlayAnimation;		// アニメーション状態遷移コルーチン
 	private List<AnmData> m_AnmList = new List<AnmData>();		// 再生アニメーションリスト
 	private float m_PrevTime;				// 前フレームのアニメーションのNormalize時間
+    private System.Action<float> m_EndIntervention; // 終了時間変更の介入処理
+    private Coroutine m_ChainAnimation;     // 連続アニメーションコルーチン
+    private List<ChainAnmData> m_ChainAnmList = new List<ChainAnmData>(); // 連続アニメーションリスト
 	
 	
 	void Awake(){
@@ -44,46 +46,220 @@ public class AnimationManager : MonoBehaviour {
 		m_PlayAnimation = null;
 		m_AnmList.Clear();
 		m_PrevTime = 0.0f;
-	}
+        m_EndIntervention = null;
+        m_ChainAnmList.Clear();
+        m_ChainAnimation = null;
 
-	// アニメーション変更(ループ)
-	public void ChangeAnimationLoop(string name, float duration, int layer){
-		// ループ再生してるアニメーションと同じアニメーションを再生しようとする場合
-		if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName(name)){
-			return;
-		}
-		
-		if (m_PlayAnimation != null){
-			StopCoroutine(m_PlayAnimation);
-			m_AnmList.Clear();
-		}
+    }
 
-		m_PlayAnimation = StartCoroutine(loopAnimation(name, duration, layer));
-	}
+    // アニメーション変更(ループ)
+    public void ChangeAnimationLoopInFixedTime(string name)
+    {
+        AnimationReset();
+        m_PlayAnimation = StartCoroutine(setLoopAnimation(name));
+    }
 
-	// アニメーション変更
-	public void ChangeAnimation(string name, float duration, int layer, float endTime){
-		if (m_PlayAnimation != null){
-			StopCoroutine(m_PlayAnimation);
-			m_AnmList.Clear();
-		}
-		AnmData data = new AnmData(name, duration, layer, endTime);
-		m_AnmList.Add(data);
-		m_PlayAnimation = StartCoroutine(playAnimation());
-	}
+    // アニメーション変更
+    public void ChangeAnimationInFixedTime(string name, string nextName = null)
+    {
+        AnimationReset();
+        m_PlayAnimation = StartCoroutine(setAnimation(name, nextName));
+    }
+    
+    // 再生中のアニメーションのあとに続けてアニメーションを再生する(ループでないアニメーションに限る)
+    public void ChainAnimation(string name, string nextName = null)
+    {
+        m_ChainAnmList.Add(new ChainAnmData(name, nextName));
+        if (m_PlayAnimation == null)
+        {
+            return;
+        }
 
-	// 再生中のアニメーションのあとに続けてアニメーションを再生する(ループでないアニメーションに限る)
-	public void ChainAnimation(AnmData data){
-		if (m_PlayAnimation == null){
-			return;
-		}
-		m_AnmList.Add(data);
-	}
+        if (m_ChainAnimation == null)
+        {
+            m_ChainAnimation = StartCoroutine(setChainAnimation());
+        }
+    }
 
-	// アニメーション状態を設定
-	public void SetAnmState(AnmState state){
-		m_AnmState = state;
-	}
+    // アニメーション変更(ループ)
+    private void ChangeAnimationLoopInFixedTime(string name, int layer, float durationTime, float fixedTime)
+    {
+        AnmData data = new AnmData(name, layer, durationTime, 0, fixedTime);
+        m_AnmList.Add(data);
+        m_PlayAnimation = StartCoroutine(loopAnimation());
+    }
+
+    // アニメーション変更
+    private void ChangeAnimationInFixedTime(string name, int layer, float durationTime, float endTime, float fixedTime)
+    {
+        AnmData data = new AnmData(name, layer, durationTime, endTime, fixedTime);
+        m_AnmList.Add(data);
+        m_PlayAnimation = StartCoroutine(playAnimation());
+    }
+
+    // 再生中のアニメーションのあとに続けてアニメーションを再生する(ループでないアニメーションに限る)
+    private void ChainAnimation(string name, int layer, float durationTime, float endTime, float fixedTime)
+    {
+        AnmData data = new AnmData(name, layer, durationTime, endTime, fixedTime);
+        m_AnmList.Add(data);
+    }
+
+    // ループアニメーションコルーチン
+    private IEnumerator loopAnimation()
+    {
+        AnmData data = m_AnmList[0];
+
+        m_Animator.CrossFadeInFixedTime(data._name, data._durationTime, data._layer, data._fixedTime);
+        m_AnmState = AnmState.CHANGE;
+
+        yield return new WaitForSeconds(data._durationTime);
+
+        m_AnmList.Remove(data);
+
+        m_AnmState = AnmState.LOOP;
+        m_PlayAnimation = null;
+    }
+
+    // 単発アニメーションコルーチン
+    private IEnumerator playAnimation()
+    {
+        AnmData data = m_AnmList[0];
+
+        // 変更
+        m_Animator.CrossFadeInFixedTime(data._name, data._durationTime, data._layer, data._fixedTime);
+        m_AnmState = AnmState.CHANGE;
+        yield return new WaitForSeconds(data._durationTime);
+
+        // 開始
+        m_AnmState = AnmState.PLAY;
+        
+        // アニメーション中
+        float length = m_Animator.GetCurrentAnimatorStateInfo(0).length;
+        float time = length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+        float endTime = GetEndTime(data._name) * data._endNormalizeTime;
+        // 終了時間変更の介入処理設定
+        m_EndIntervention = (end) => { endTime = end; };
+        while(time < endTime)
+        {
+            yield return null;
+            time = length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+        }
+        m_EndIntervention = null;
+
+        // アニメーションリストから再生したアニメーションを削除
+        m_AnmList.Remove(data);
+
+        // アニメーションリストが空
+        if (m_AnmList.Count == 0)
+        {
+            // 終了
+            m_AnmState = AnmState.END;
+            m_PlayAnimation = null;
+        }
+        // アニメーションが入ってたら続けて再生
+        else
+        {
+            m_PlayAnimation = StartCoroutine(playAnimation());
+        }
+
+    }
+
+    // アニメーションデータを使用したデータ設定(ループ)
+    IEnumerator setLoopAnimation(string name)
+    {
+        // Chnage中
+        m_AnmState = AnmState.GET_NAME;
+
+        // 再生中のアニメーション名取得
+        string currentName = GetName();
+        while (currentName == null)
+        {
+            yield return null;
+            currentName = GetName();
+        }
+
+        // 同名の場合は中止
+        if (currentName == name)
+        {
+            m_AnmState = AnmState.LOOP;
+            yield break;
+        }
+
+        // 再生するアニメーションデータを取得
+        AnmData data = AnimationDataBase.GetTransData(name, currentName);
+
+        m_PlayAnimation = null;
+        ChangeAnimationLoopInFixedTime(name, data._layer, data._durationTime, data._fixedTime);
+    }
+
+    // アニメーションデータを使用したデータ設定
+    IEnumerator setAnimation(string name, string nextName)
+    {
+        // Chnage中
+        m_AnmState = AnmState.GET_NAME;
+
+        // 再生中のアニメーション名取得
+        string currentName = GetName();
+        while(currentName == null)
+        {
+            Debug.Log("GetName");
+            yield return null;
+            currentName = GetName();
+        }
+
+        // 再生するアニメーションデータを取得
+        AnmData data = AnimationDataBase.GetTransData(name, currentName);
+        float endTime = AnimationDataBase.GetTransData(name, nextName)._endNormalizeTime;
+
+        ChangeAnimationInFixedTime(name, data._layer, data._durationTime, endTime, data._fixedTime);
+        yield return null;
+    }
+
+    // アニメーション追加コルーチン
+    IEnumerator setChainAnimation()
+    {
+        // 状態が現在NAMEを取得中は待機
+        while(m_AnmState == AnmState.GET_NAME)
+        {
+            yield return null;
+        }
+
+        // アニメーションリストが空なら中止
+        if (m_AnmList.Count == 0)
+        {
+            yield break;
+        }
+
+        ChainAnmData chainData = m_ChainAnmList[0];
+        string name = chainData._name;
+        string nextName = chainData._nextName;
+
+        // 再生するアニメーションデータを取得
+        string currentName = m_AnmList[0]._name;
+        AnmData data = AnimationDataBase.GetTransData(name, currentName);
+        float endTime = AnimationDataBase.GetTransData(name, nextName)._endNormalizeTime;
+
+        ChainAnimation(name, data._layer, data._durationTime, endTime, data._fixedTime);
+
+        m_ChainAnmList.Remove(chainData);
+        if (m_ChainAnmList.Count > 0)
+        {
+            m_ChainAnimation = StartCoroutine(setChainAnimation());
+        }
+        else
+        {
+            m_ChainAnimation = null;
+        }
+    }
+
+    // 再生中アニメーションの終了時間を介入して変更
+    public void EndIntervention(float endTime)
+    {
+        if (m_EndIntervention != null)
+        {
+            m_EndIntervention(endTime);
+        }
+    }
 
 	// アニメーションが終了状態
 	public bool IsAnmEnd(){
@@ -93,10 +269,24 @@ public class AnimationManager : MonoBehaviour {
 	// アニメーションがENDかLOOP状態
 	public bool IsAnmEndORLoop(){
 		return (m_AnmState == AnmState.END) || (m_AnmState == AnmState.LOOP);
-	}
+    }
 
-	// アニメーション状態取得
-	public AnmState GetState(){
+    // フレームから時間取得
+    public float FrameToTime(float frameCount)
+    {
+        float time = frameCount / FRAME_RATE;
+        return time;
+    }
+
+    // 時間からフレーム取得
+    public int TimeToFrame(float time)
+    {
+        int frameCount = (int)(time * FRAME_RATE);
+        return frameCount;
+    }
+
+    // アニメーション状態取得
+    public AnmState GetState(){
 		return m_AnmState;
 	}
 
@@ -105,6 +295,92 @@ public class AnimationManager : MonoBehaviour {
 		return m_Animator;
 	}
 
+    // 現在フレーム取得
+    public int GetFrame()
+    {
+        float time = m_Animator.GetCurrentAnimatorStateInfo(0).length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+        return TimeToFrame(time);
+    }
+
+    // 現在時間取得
+    public float GetTime()
+    {
+        return m_Animator.GetCurrentAnimatorStateInfo(0).length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    }
+
+    // 終了時間取得
+    public float GetEndTime(string name)
+    {
+        RuntimeAnimatorController ac = m_Animator.runtimeAnimatorController;
+        AnimationClip clip = System.Array.Find<AnimationClip>(ac.animationClips, (anmClip) => anmClip.name.Equals(name));
+
+        if (clip != null)
+        {
+            return clip.length;
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+
+    // 現在再生してるアニメーション名取得
+    public string GetName()
+    {
+        AnimatorClipInfo[] infos = m_Animator.GetCurrentAnimatorClipInfo(0);
+        if (infos.Length > 0)
+        {
+            return infos[0].clip.name;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    // アニメーションリセット
+    private void AnimationReset()
+    {
+        if (m_PlayAnimation != null)
+        {
+            StopCoroutine(m_PlayAnimation);
+            m_PlayAnimation = null;
+            m_AnmList.Clear();
+        }
+        if (m_ChainAnimation != null)
+        {
+            StopCoroutine(m_ChainAnimation);
+            m_ChainAnimation = null;
+            m_ChainAnmList.Clear();
+        }
+    }
+
+
+    // アニメーション変更(ループ)
+    //public void ChangeAnimationLoop(string name, float duration, int layer){
+    //	// ループ再生してるアニメーションと同じアニメーションを再生しようとする場合
+    //	if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName(name)){
+    //		return;
+    //	}
+
+    //	if (m_PlayAnimation != null){
+    //		StopCoroutine(m_PlayAnimation);
+    //		m_AnmList.Clear();
+    //	}
+
+    //	m_PlayAnimation = StartCoroutine(loopAnimation(name, duration, layer));
+    //}
+
+    // アニメーション変更
+    //public void ChangeAnimation(string name, float duration, int layer, float endTime){
+    //	if (m_PlayAnimation != null){
+    //		StopCoroutine(m_PlayAnimation);
+    //		m_AnmList.Clear();
+    //	}
+    //	AnmData data = new AnmData(name, duration, layer, endTime);
+    //	m_AnmList.Add(data);
+    //	m_PlayAnimation = StartCoroutine(playAnimation());
+    //}
     // フレームカウントを取得
     //public int[] GetFrameCount()
     //{
@@ -123,104 +399,102 @@ public class AnimationManager : MonoBehaviour {
     //    }
     //}
 
-	// アニメーション状態遷移コルーチン
-	private IEnumerator playAnimation(){
-		// アニメーションリストの先頭を取得
-		AnmData data = m_AnmList[0];
+    // アニメーション状態遷移コルーチン
+    //private IEnumerator playAnimation(){
+    //	// アニメーションリストの先頭を取得
+    //	AnmData data = m_AnmList[0];
 
-		// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
-		if (m_AnmState == AnmState.CHANGE){
-			//m_PrevTime = 0.0f;
-			float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-			while(m_PrevTime < tmpCurrent){
-				m_PrevTime = tmpCurrent;
-				yield return null;
-				tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-			}
-		}
+    //	// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
+    //	if (m_AnmState == AnmState.CHANGE){
 
-		// アニメーション変更
-		m_Animator.CrossFade(data._name, data._duration, data._layer, data._duration);
+    //		//m_PrevTime = 0.0f;
+    //		float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //		while(m_PrevTime < tmpCurrent){
+    //			m_PrevTime = tmpCurrent;
+    //			yield return null;
+    //			tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //		}
+    //	}
 
-		// 変更中
-		m_AnmState = AnmState.CHANGE;
-		m_PrevTime = 0.0f;
-		float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		while(m_PrevTime < current){
-			yield return null;
-			m_PrevTime = current;
-			current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		}
-		m_PrevTime = 0.0f;
-		
-		// 開始
-		m_AnmState = AnmState.START;
-		yield return null;
+    //	// アニメーション変更
+    //	m_Animator.CrossFade(data._name, data._duration, data._layer, data._duration);
 
-		// アニメーション中
-		m_AnmState = AnmState.PLAY;
+    //	// 変更中
+    //	m_AnmState = AnmState.CHANGE;
+    //	m_PrevTime = 0.0f;
+    //	float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	while(m_PrevTime < current){
+    //		yield return null;
+    //		m_PrevTime = current;
+    //		current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	}
+    //	m_PrevTime = 0.0f;
+
+    //	// 開始
+    //	m_AnmState = AnmState.START;
+    //	yield return null;
+
+    //	// アニメーション中
+    //	m_AnmState = AnmState.PLAY;
 
 
-		float currentTime = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		while(currentTime < data._endTime){
-			yield return null;
-			currentTime = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		}
+    //	float currentTime = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	while(currentTime < data._endTime){
+    //		yield return null;
+    //		currentTime = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	}
 
-		// アニメーションリストから再生したアニメーションを削除
-		m_AnmList.Remove(data);
+    //	// アニメーションリストから再生したアニメーションを削除
+    //	m_AnmList.Remove(data);
 
-		// アニメーションリストが空
-		if (m_AnmList.Count == 0){
-			// 終了
-			m_AnmState = AnmState.END;
-			m_PlayAnimation = null;
-		}
-		// アニメーションが入ってたら続けて再生
-		else{
-			m_PlayAnimation = StartCoroutine(playAnimation());
-		}
-	}
+    //	// アニメーションリストが空
+    //	if (m_AnmList.Count == 0){
+    //		// 終了
+    //		m_AnmState = AnmState.END;
+    //		m_PlayAnimation = null;
+    //	}
+    //	// アニメーションが入ってたら続けて再生
+    //	else{
+    //		m_PlayAnimation = StartCoroutine(playAnimation());
+    //	}
+    //}
 
-	IEnumerator loopAnimation(string name, float duration, int layer){
+    //IEnumerator loopAnimation(string name, float duration, int layer){
 
-		// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
-		if (m_AnmState == AnmState.CHANGE){
-			float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-			while(m_PrevTime < tmpCurrent){
-				m_PrevTime = tmpCurrent;
-				yield return null;
-				tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-			}
+    //	// 前回アニメーションがまだCHANGE状態なら切り替わりを待つ
+    //	if (m_AnmState == AnmState.CHANGE){
+    //		float tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //		while(m_PrevTime < tmpCurrent){
+    //			m_PrevTime = tmpCurrent;
+    //			yield return null;
+    //			tmpCurrent = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //		}
 
-			// 切り替わったあとに同じアニメーションを再生しようとしてたら終了
-			if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName(name)){
-				m_AnmState = AnmState.LOOP;
-				yield break;
-			}
-		}
+    //		// 切り替わったあとに同じアニメーションを再生しようとしてたら終了
+    //		if (m_Animator.GetCurrentAnimatorStateInfo(0).IsName(name)){
+    //			m_AnmState = AnmState.LOOP;
+    //			m_PlayAnimation = null;
+    //			yield break;
+    //		}
+    //	}
 
-		// 開始
-		m_Animator.CrossFade(name, duration, layer);
+    //	// 開始
+    //	m_Animator.CrossFade(name, duration, layer);
 
-		// 変更中
-		m_AnmState = AnmState.CHANGE;
-		m_PrevTime = 0.0f;
-		float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		Debug.Log(m_Animator.GetCurrentAnimatorClipInfo(0)[0].clip.name);
-		Debug.Log(name);
-		Debug.Log(current);
-		while(m_PrevTime < current){
-			yield return null;
-			m_PrevTime = current;
-			current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-		Debug.Log(m_Animator.GetCurrentAnimatorClipInfo(0)[0].clip.name);
-		Debug.Log("prev " + m_PrevTime + " : " + "current" + current);
-		}
-		m_PrevTime = 0.0f;
-		Debug.Log("終了");
+    //	// 変更中
+    //	m_AnmState = AnmState.CHANGE;
+    //	m_PrevTime = 0.0f;
+    //	float current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	while(m_PrevTime < current){
+    //		yield return null;
+    //		m_PrevTime = current;
+    //		current = m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+    //	}
+    //	m_PrevTime = 0.0f;
 
-		// ループ状態
-		m_AnmState = AnmState.LOOP;
-	}
+    //	// ループ状態
+    //	m_AnmState = AnmState.LOOP;
+
+    //	m_PlayAnimation = null;
+    //}
 }

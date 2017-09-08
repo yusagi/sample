@@ -43,6 +43,6 @@ public class SkillDataBase{
 		{SkillType.HIKICK, new SkillData("キック","Hikick", 15, 30, ActionType.ATTACK)},
 		{SkillType.SPINKICK, new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.ATTACK)},
 		{SkillType.COUNTER, new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER)},
-		{SkillType.DEFENSE, new SkillData("ガード", "Defecse", 5, 0, ActionType.DEFENSE)},
+		//{SkillType.DEFENSE, new SkillData("ガード", "Defecse", 5, 0, ActionType.DEFENSE)},
 	};
 }

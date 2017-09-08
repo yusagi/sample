@@ -89,10 +89,10 @@ public class GameManager : MonoBehaviour {
                 if (TouchController.IsPlanetTouch())
                 {
                     if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME * 0.5f){
-                         GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoop("Idle", 0.1f, 0);
+                        GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
                     else{
-                         GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoop("Run", 0.1f, 0);
+                        GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
                     }
 
                     if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME)
@@ -129,7 +129,9 @@ public class GameManager : MonoBehaviour {
             if (m_FrickCount == 0)
             {
                 m_FrickCount = FRICK_COUNT;
+                if (enemyController.state.current == GrgrCharCtrl.State.FLICK_MOVE){
                 enemyController.transform.rotation = Quaternion.AngleAxis(Random.Range(0.0f, 359.0f), enemyController.transform.up) * enemyController.transform.rotation;
+                }
             }
 
             enemyController.m_CurrentVelocity = Vector3.forward * 1080.0f;

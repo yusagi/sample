@@ -31,6 +31,7 @@ public class BattleManager : MonoBehaviour {
 		SECOND = 1,
 		THIRD = 2,
 		FOURTH = 3,
+        END,
 	}
 
 	enum SkillChoicePoint{
@@ -210,7 +211,8 @@ public class BattleManager : MonoBehaviour {
 						Vector3 eFront = Vector3.ProjectOnPlane(m_Target.transform.forward, up).normalized;
 						float angle = Mathf.Acos(Vector3.Dot(pFront, eFront)) * Mathf.Rad2Deg;
 						if (angle <= 45.0f){
-                                target.battle = target.FrontBattle(m_Player);//.BackBattle();
+							Debug.Log("Back");
+                                target.battle = target.BackBattle(m_Player);
 						}
 						else{
                                 target.battle = target.FrontBattle(m_Player);
@@ -247,6 +249,15 @@ public class BattleManager : MonoBehaviour {
                     {
                         ResultUpdate();
                     }
+
+					if (Input.GetKeyDown(KeyCode.Q)){
+						SkillBattlePlayFin();
+						battle.Change(Battle.BATTLE_END);
+						battle.Start();
+						player.m_IsBattleAnmPlay = false;
+						target.m_IsBattleAnmPlay = false;
+						return;
+					}
 
                     //  SKILL_BATTLE_ENDへ移行
                     if ((player.m_IsBattleAnmStart && target.m_IsBattleAnmStart) && (!player.m_IsBattleAnmPlay && !target.m_IsBattleAnmPlay)) {
@@ -388,25 +399,40 @@ public class BattleManager : MonoBehaviour {
 
 	// バトル中スローコルーチン
 	IEnumerator BattleSlow(){
+		SkillChoiceBoardController board = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
+
 		// 減速スロー
 		IEnumerator<float> speed = UtilityMath.FLerp(SLOW_START, SLOW_END, SLOW_START_TIME, EaseType.OUT_EXP, 1, true);
 		while(speed.MoveNext()){
 			Time.timeScale = speed.Current;
-			yield return null;
-		}
-		
-		// 最遅スロー維持
-		float time = 0.0f;
-		while (time < SLOW_KEEP_TIME){
-			time += Time.unscaledDeltaTime;
+
+			if (board.GetPlayerChoiceCount() == 4 || board.m_PlayerAP < 10){
+        		skillBattleStartEnd = true;
+				break;
+			}
+
 			yield return null;
 		}
 
+		// 最遅スロー維持
+		if (!skillBattleStartEnd){
+			float time = 0.0f;
+			while (time < SLOW_KEEP_TIME){
+				time += Time.unscaledDeltaTime;
+
+				if (board.GetPlayerChoiceCount() == 4 || board.m_PlayerAP < 10){
+					break;
+				}
+
+				yield return null;
+			}
+		}
+		
         skillBattleStartEnd = true;
 		yield return null;
 
 		// 加速スロー
-        speed = UtilityMath.FLerp(SLOW_END, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP, 1, true);
+        speed = UtilityMath.FLerp(Time.timeScale, SLOW_END2, SLOW_END_TIME, EaseType.OUT_EXP, 1, true);
         while (speed.MoveNext())
         {
             Time.timeScale = speed.Current;
