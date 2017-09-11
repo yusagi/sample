@@ -428,7 +428,6 @@ public class GrgrCharCtrl : MonoBehaviour
             if (other.collider.GetComponent<PillerDeadTime>().isDead)
                 return;
 
-            GameData.killPillers++;
 
             other.collider.GetComponent<PillerDeadTime>().isDead = true;
             Vector3 impact = (other.collider.transform.up + rigidbody.velocity);
@@ -664,6 +663,14 @@ public class GrgrCharCtrl : MonoBehaviour
                             nextName = "Idle";
                         }
                     }
+                    else{
+                            if (hp <= 0){
+                                nextName = "DamageDown";
+                            }
+                            else{
+                                nextName = "Run";
+                            }
+                    }
 
                     // ダメージを受ける場合は処理わけ
                     string damageName = null;
@@ -712,7 +719,16 @@ public class GrgrCharCtrl : MonoBehaviour
                             nextName = "Idle";
                         }
                     }
-
+                    else{
+                            if (hp <= 0){
+                                nextName = "DamageDown";
+                            }
+                            else{
+                                nextName = "Run";
+                            }
+                    }
+                    //m_AnmMgr.ChangeAnimationInFixedTime("Land", "Counter_Slash");
+                    //m_AnmMgr.ChainAnimation("Counter_Slash", nextName);
                     m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
                     m_AnmMgr.ChainAnimation("RISING_P", nextName);
                     damage = data._attack;
@@ -753,7 +769,12 @@ public class GrgrCharCtrl : MonoBehaviour
                             }
                             else
                             {
-                                nextName = "Idle";
+                                if (hp <= 0){
+                                    nextName = "DamageDown";
+                                }
+                                else{
+                                    nextName = "Idle";
+                                }
                             }
                         }
                         m_AnmMgr.ChangeAnimationInFixedTime(damageName, nextName);

@@ -250,15 +250,6 @@ public class BattleManager : MonoBehaviour {
                         ResultUpdate();
                     }
 
-					if (Input.GetKeyDown(KeyCode.Q)){
-						SkillBattlePlayFin();
-						battle.Change(Battle.BATTLE_END);
-						battle.Start();
-						player.m_IsBattleAnmPlay = false;
-						target.m_IsBattleAnmPlay = false;
-						return;
-					}
-
                     //  SKILL_BATTLE_ENDへ移行
                     if ((player.m_IsBattleAnmStart && target.m_IsBattleAnmStart) && (!player.m_IsBattleAnmPlay && !target.m_IsBattleAnmPlay)) {
 					SkillBattlePlayFin();

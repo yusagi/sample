@@ -9,6 +9,7 @@ public class GameData : MonoBehaviour{
 
 	private static Transform camera;
 	private static Transform battleBoard;
+	private static Transform pillerGenerator;
 
 	void Awake(){
 		killPillers = 0;
@@ -28,5 +29,13 @@ public class GameData : MonoBehaviour{
 		}
 
 		return battleBoard;
+	}
+
+	public static Transform GetPillerGenerator(){
+		if (pillerGenerator == null){
+			pillerGenerator = GameObject.Find("PillerGenerator").transform;
+		}
+
+		return pillerGenerator;
 	}
 }

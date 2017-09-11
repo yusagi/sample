@@ -210,6 +210,8 @@ public class SkillChoiceBoardController : MonoBehaviour {
 					case ActionType.ATTACK:{
 						m_PlayerResult[pahse] = AnimationType.NORMAL_ATTACK;
 						m_EnemyResult[pahse] = AnimationType.NORMAL_ATTACK;
+
+						
 					}
 					break;
 					// エネミーカウンター

@@ -5,6 +5,7 @@ using UnityEngine;
 public class PillerGenerator : MonoBehaviour {
 
 	public Transform pillers;
+	public int INI_PILLER_NUMS = 500;
 	public float INTERVAL = 5.0f;
 	public int GENERATE_NUM = 10;
 	public int MAX_PILLER = 500;
@@ -14,7 +15,7 @@ public class PillerGenerator : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		transform.rotation = Quaternion.identity;
-		int count = 100;
+		int count = INI_PILLER_NUMS;
 		while(count != 0){
 			if (!PillerGenerate())
 				continue;
