@@ -85,6 +85,9 @@ public class GrgrCharCtrl : MonoBehaviour
     IEnumerator<Quaternion> qLerp;
     public IEnumerator battle { get; set; }
 
+    // バトルシステム
+    System.Action m_BattleSystem;
+
     // 外部入力
     public TouchType m_TouchType { get; set; }
     public Vector3 m_CurrentVelocity { get; set; }
@@ -100,16 +103,6 @@ public class GrgrCharCtrl : MonoBehaviour
 
     #region Unity関数
 
-    IEnumerator a()
-    {
-        if (false)
-        {
-            yield return null;
-        }
-        Debug.Log(gameObject.name + " " + A);
-
-    }
-    Coroutine A;
     void Awake()
     {
 
@@ -144,6 +137,9 @@ public class GrgrCharCtrl : MonoBehaviour
 
         // ギア変化インターバル初期化
         m_GearChangeInterval = 0.0f;
+
+        // バトルシステム初期化
+        m_BattleSystem = null;
 
         // 外部入力変数初期化
         m_TouchType = TouchType.None;
@@ -538,13 +534,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     }
                 }
                 break;
-            // スキルバトル終了
-            case BattleManager.Battle.SKILL_BATTLE_END:
-                {
-                    FrickAddForce(Vector3.zero);
-                    GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
-                }
-                break;
             // バトル終了
             case BattleManager.Battle.BATTLE_END:
                 {
@@ -572,6 +561,9 @@ public class GrgrCharCtrl : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region スタック式バトル
     // バトル結果更新 
     void BattleResultUpdate(GameObject target)
     {
@@ -663,13 +655,16 @@ public class GrgrCharCtrl : MonoBehaviour
                             nextName = "Idle";
                         }
                     }
-                    else{
-                            if (hp <= 0){
-                                nextName = "DamageDown";
-                            }
-                            else{
-                                nextName = "Run";
-                            }
+                    else
+                    {
+                        if (hp <= 0)
+                        {
+                            nextName = "DamageDown";
+                        }
+                        else
+                        {
+                            nextName = "Run";
+                        }
                     }
 
                     // ダメージを受ける場合は処理わけ
@@ -719,13 +714,16 @@ public class GrgrCharCtrl : MonoBehaviour
                             nextName = "Idle";
                         }
                     }
-                    else{
-                            if (hp <= 0){
-                                nextName = "DamageDown";
-                            }
-                            else{
-                                nextName = "Run";
-                            }
+                    else
+                    {
+                        if (hp <= 0)
+                        {
+                            nextName = "DamageDown";
+                        }
+                        else
+                        {
+                            nextName = "Run";
+                        }
                     }
                     //m_AnmMgr.ChangeAnimationInFixedTime("Land", "Counter_Slash");
                     //m_AnmMgr.ChainAnimation("Counter_Slash", nextName);
@@ -743,7 +741,7 @@ public class GrgrCharCtrl : MonoBehaviour
                     {
                         //damageName = "DAMAGED00";
                     }
-                    
+
                     if (string.IsNullOrEmpty(damageName))
                     {
                         m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
@@ -769,10 +767,12 @@ public class GrgrCharCtrl : MonoBehaviour
                             }
                             else
                             {
-                                if (hp <= 0){
+                                if (hp <= 0)
+                                {
                                     nextName = "DamageDown";
                                 }
-                                else{
+                                else
+                                {
                                     nextName = "Idle";
                                 }
                             }
@@ -892,7 +892,7 @@ public class GrgrCharCtrl : MonoBehaviour
     {
         m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
         yield return null;
-        
+
         Vector3 toTarget = target.position - transform.position;
         Vector3 front = Vector3.ProjectOnPlane(toTarget, transform.up).normalized;
         transform.rotation = Quaternion.LookRotation(front, transform.up);
@@ -919,7 +919,6 @@ public class GrgrCharCtrl : MonoBehaviour
 
         m_IsBattleAnmStart = false;
     }
+#endregion
 
-
-    #endregion
 }

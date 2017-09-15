@@ -37,13 +37,13 @@ public class SkillCardUI : MonoBehaviour {
 			controller.m_PlayerAP = tmp;
 
 			m_Image.color = new Color(m_Image.color.r, m_Image.color.g, m_Image.color.b, 0.5f);
-			controller.AddChoice(m_Data, SkillChoiceBoardController.DataType.PLAYER);
+			controller.AddChoice(m_Data, GameManager.m_Player);
 		}
 		else{
 			controller.m_PlayerAP += m_Data._ap;
 
 			m_Image.color = new Color(m_Image.color.r, m_Image.color.g, m_Image.color.b, 1.0f);
-			transform.parent.parent.GetComponent<SkillChoiceBoardController>().CutChoice(m_Data);
+			controller.CutChoice(m_Data, GameManager.m_Player);
 		}
 	}
 }
