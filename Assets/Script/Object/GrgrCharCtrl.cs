@@ -110,7 +110,7 @@ public class GrgrCharCtrl : MonoBehaviour
 
         // スキルマネージャー初期化
         skillManager = new SkillManager();
-        foreach (var sData in SkillDataBase.DATAS)
+        foreach (var sData in SkillDataBase.SKILL_DATAS)
         {
             skillManager.AddSkill(sData.Value);
         }
@@ -629,156 +629,54 @@ public class GrgrCharCtrl : MonoBehaviour
         AnimationType anmType = controller.GetAnimationType(gameObject, resultPhase);
         switch (anmType)
         {
-            case AnimationType.NORMAL_ATTACK:
+            // 通常攻撃
+            case AnimationType.ATTACK:
                 {
                     SkillData data = controller.GetSkillData(gameObject, resultPhase);
 
-                    // 次に再生するアニメーション名設定
-                    BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
-                    string nextName = null;
-                    if (nextPhase != BattleManager.ResultPhase.END)
-                    {
-                        AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
-                        if (nextType != AnimationType.NONE)
-                        {
-                            if (nextType == AnimationType.COUNTER_ATTACK)
-                            {
-                                nextName = "Land";
-                            }
-                            else
-                            {
-                                nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
-                            }
-                        }
-                        else
-                        {
-                            nextName = "Idle";
-                        }
-                    }
-                    else
-                    {
-                        if (hp <= 0)
-                        {
-                            nextName = "DamageDown";
-                        }
-                        else
-                        {
-                            nextName = "Run";
-                        }
-                    }
-
-                    // ダメージを受ける場合は処理わけ
-                    string damageName = null;
-                    AnimationType targetType = controller.GetAnimationType(target, resultPhase);
-                    if (targetType == AnimationType.NORMAL_ATTACK || targetType == AnimationType.COUNTER_ATTACK)
-                    {
-                        //damageName = "DAMAGED00";
-                    }
-
-                    if (string.IsNullOrEmpty(damageName))
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, nextName);
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, damageName);
-                        m_AnmMgr.ChainAnimation(damageName, nextName);
-                    }
+                    m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
 
                     damage = data._attack;
                 }
                 break;
+            // 攻撃はじかれ
+            case AnimationType.ATTACK_REPELLED:
+                {
+                    m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
+                }
+                break;
+            // カウンター攻撃
             case AnimationType.COUNTER_ATTACK:
                 {
                     SkillData data = controller.GetSkillData(gameObject, resultPhase);
 
-                    // 次に再生するアニメーション名設定
-                    BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
-                    string nextName = null;
-                    if (nextPhase != BattleManager.ResultPhase.END)
-                    {
-                        AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
-                        if (nextType != AnimationType.NONE)
-                        {
-                            if (nextType == AnimationType.COUNTER_ATTACK)
-                            {
-                                nextName = "Land";
-                            }
-                            else
-                            {
-                                nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
-                            }
-                        }
-                        else
-                        {
-                            nextName = "Idle";
-                        }
-                    }
-                    else
-                    {
-                        if (hp <= 0)
-                        {
-                            nextName = "DamageDown";
-                        }
-                        else
-                        {
-                            nextName = "Run";
-                        }
-                    }
-                    //m_AnmMgr.ChangeAnimationInFixedTime("Land", "Counter_Slash");
-                    //m_AnmMgr.ChainAnimation("Counter_Slash", nextName);
                     m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
-                    m_AnmMgr.ChainAnimation("RISING_P", nextName);
+                    m_AnmMgr.ChainAnimation("RISING_P", "AttackCommon");
                     damage = data._attack;
                     hp += damage;
                 }
                 break;
+            // カウンタースカし
+            case AnimationType.COUNTER_MATCH:
+                {
+                    m_AnmMgr.ChangeAnimationInFixedTime("Land");
+                }
+                break;
+            // 防御
+            case AnimationType.GUARD:
+                {
+                    m_AnmMgr.ChangeAnimationLoopInFixedTime("Guard");
+                }
+                break;
+            // 防御崩壊
+            case AnimationType.GUARD_BREAK:
+                {
+                    m_AnmMgr.ChangeAnimationLoopInFixedTime("GuardBreak");
+                }
+                break;
             case AnimationType.NONE:
                 {
-                    string damageName = null;
-                    AnimationType targetType = controller.GetAnimationType(target, resultPhase);
-                    if (targetType == AnimationType.NORMAL_ATTACK || targetType == AnimationType.COUNTER_ATTACK)
-                    {
-                        //damageName = "DAMAGED00";
-                    }
-
-                    if (string.IsNullOrEmpty(damageName))
-                    {
-                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
-                    }
-                    else
-                    {
-                        // 次に再生するアニメーション名設定
-                        BattleManager.ResultPhase nextPhase = (BattleManager.ResultPhase)((int)resultPhase + 1);
-                        string nextName = null;
-                        if (nextPhase != BattleManager.ResultPhase.END)
-                        {
-                            AnimationType nextType = controller.GetAnimationType(gameObject, nextPhase);
-                            if (nextType != AnimationType.NONE)
-                            {
-                                if (nextType == AnimationType.COUNTER_ATTACK)
-                                {
-                                    nextName = "Land";
-                                }
-                                else
-                                {
-                                    nextName = controller.GetSkillData(gameObject, nextPhase)._anmName;
-                                }
-                            }
-                            else
-                            {
-                                if (hp <= 0)
-                                {
-                                    nextName = "DamageDown";
-                                }
-                                else
-                                {
-                                    nextName = "Idle";
-                                }
-                            }
-                        }
-                        m_AnmMgr.ChangeAnimationInFixedTime(damageName, nextName);
-                    }
+                    m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                 }
                 break;
         }

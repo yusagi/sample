@@ -2,24 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum SkillType{
-	JAB,
-	HIKICK,
-	SPINKICK,
-	COUNTER,
-	DEFENSE,
-}
-
 public enum ActionType{
-	ATTACK = 0,
-	COUNTER = 1,
-	DEFENSE = 2,
-}
-
-public enum AnimationType{
-	NORMAL_ATTACK = 0,
-	COUNTER_ATTACK,
-	NONE,
+	NORMAL_ATTACK = 0,  // 通常攻撃
+	COUNTER_ATTACK,     // カウンター攻撃
+	GUARD,              // ガード
+    GUARD_BREAK_ATTACK, // ガード破壊攻撃        
 }
 
 public class SkillData{
@@ -38,11 +25,11 @@ public class SkillData{
 }
 
 public class SkillDataBase{
-	public static Dictionary<SkillType, SkillData> DATAS = new Dictionary<SkillType, SkillData>(){
-		{SkillType.JAB, new SkillData("ジャブ", "Jab", 10, 20, ActionType.ATTACK)},
-		{SkillType.HIKICK, new SkillData("キック","Hikick", 15, 30, ActionType.ATTACK)},
-		{SkillType.SPINKICK, new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.ATTACK)},
-		{SkillType.COUNTER, new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER)},
-		//{SkillType.DEFENSE, new SkillData("ガード", "Defecse", 5, 0, ActionType.DEFENSE)},
+	public static Dictionary<string, SkillData> SKILL_DATAS = new Dictionary<string, SkillData>(){
+		{"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
+		{"Hikick", new SkillData("キック","Hikick", 15, 30, ActionType.NORMAL_ATTACK)},
+		{"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.NORMAL_ATTACK)},
+		{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
+		{"Guard", new SkillData("ガード", "Guard", 5, 0, ActionType.GUARD)},
 	};
 }

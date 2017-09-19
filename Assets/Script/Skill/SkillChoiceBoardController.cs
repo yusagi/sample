@@ -110,91 +110,213 @@ public class SkillChoiceBoardController : MonoBehaviour {
 	}
 
 	void SkillBattleResult(BattleManager.ResultPhase phase, GameObject player, SkillData pData, GameObject target, SkillData tData){
+        // プレイヤー未選択
 		if (pData == null){
+            // アニメーションなし
 			m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
+            // 相手データあり
 			if (tData != null){
-				if (tData._type == ActionType.ATTACK){
-					m_Results[target][phase] = new ResultData(tData, AnimationType.NORMAL_ATTACK);
-					return;
-				}
-				else{
-					m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
-					return;
+                switch (tData._type)
+                {
+                    // 通常攻撃
+                    case ActionType.NORMAL_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                        }
+                        return;
+                    // カウンター攻撃
+                    case ActionType.COUNTER_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(tData, AnimationType.COUNTER_MATCH);
+                        }
+                        return;
+                    // 防御
+                    case ActionType.GUARD:
+                        {
+                            m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD);
+                        }
+                        return;
+                    // 防御破壊攻撃
+                    case ActionType.GUARD_BREAK_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                        }
+                        return;
 				}
 			}
 		}
+        // 相手未選択
 		if (tData == null){
+            // アニメーションなし
 			m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
+            // プレイヤーデータ有り
 			if (pData != null){
-				if (pData._type == ActionType.ATTACK){
-					m_Results[player][phase] = new ResultData(pData, AnimationType.NORMAL_ATTACK);
-					return;
-				}
-				else{
-					m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
-					return;
-				}
+                switch (pData._type)
+                {
+                    // 通常攻撃
+                    case ActionType.NORMAL_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(pData, AnimationType.ATTACK);
+                        }
+                        return;
+                    // カウンター攻撃
+                    case ActionType.COUNTER_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(pData, AnimationType.COUNTER_MATCH);
+                        }
+                        return;
+                    // 防御
+                    case ActionType.GUARD:
+                        {
+                            m_Results[target][phase] = new ResultData(pData, AnimationType.GUARD);
+                        }
+                        return;
+                    // 防御破壊攻撃
+                    case ActionType.GUARD_BREAK_ATTACK:
+                        {
+                            m_Results[target][phase] = new ResultData(pData, AnimationType.ATTACK);
+                        }
+                        return;
+                }
 			}
 			return;
 		}
 
+        // 両キャラクターとも選択
 		switch(pData._type){
-			// プレイヤー攻撃
-			case ActionType.ATTACK:{
+            // プレイヤー通常攻撃
+            case ActionType.NORMAL_ATTACK:{
 				switch(tData._type){
-					// エネミー攻撃
-					case ActionType.ATTACK:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.NORMAL_ATTACK);
-						m_Results[target][phase] = new ResultData(tData, AnimationType.NORMAL_ATTACK);
-
-						
+					// エネミー通常攻撃
+					case ActionType.NORMAL_ATTACK:{
+						m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+						m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
 					}
 					break;
-					// エネミーカウンター
-					case ActionType.COUNTER:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.NORMAL_ATTACK);
+					// エネミーカウンター攻撃
+					case ActionType.COUNTER_ATTACK:{
+                        m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
 						m_Results[target][phase] = new ResultData(tData, AnimationType.COUNTER_ATTACK);
 					}
 					break;
 					// エネミー防御
-					case ActionType.DEFENSE:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
-						m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
+					case ActionType.GUARD:{
+						m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK_REPELLED);
+						m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD);
 					}
 					break;
+                    // エネミー防御破壊攻撃
+                    case ActionType.GUARD_BREAK_ATTACK:
+                    {
+                        m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+                        m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                    }
+                    break;
 				}
 			}
 			break;
-			// プレイヤーカウンター
-			case ActionType.COUNTER:{
+			// プレイヤーカウンター攻撃
+			case ActionType.COUNTER_ATTACK:{
 				switch(tData._type){
-					// エネミー攻撃
-					case ActionType.ATTACK:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.COUNTER_ATTACK);
-						m_Results[target][phase] = new ResultData(tData, AnimationType.NORMAL_ATTACK);
+					// エネミー通常攻撃
+					case ActionType.NORMAL_ATTACK:{
+                        m_Results[player][phase] = new ResultData(pData, AnimationType.COUNTER_ATTACK);
+						m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
 					}
 					break;
-					// エネミーカウンター
-					case ActionType.COUNTER:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
-						m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
+					// エネミーカウンター攻撃
+					case ActionType.COUNTER_ATTACK:{
+						m_Results[player][phase] = new ResultData(pData, AnimationType.COUNTER_MATCH);
+						m_Results[target][phase] = new ResultData(tData, AnimationType.COUNTER_MATCH);
 					}
 					break;
 					// エネミー防御
-					case ActionType.DEFENSE:{
-						m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
-						m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
+					case ActionType.GUARD:{
+						m_Results[player][phase] = new ResultData(pData, AnimationType.COUNTER_MATCH);
+						m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD);
 					}
 					break;
+                    // エネミー防御破壊攻撃
+                    case ActionType.GUARD_BREAK_ATTACK:
+                    {
+                        m_Results[player][phase] = new ResultData(pData, AnimationType.COUNTER_ATTACK);
+                        m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                    }
+                    break;
 				}
 			}
 			break;
 			// プレイヤー防御
-			case ActionType.DEFENSE:{
-				m_Results[player][phase] = new ResultData(pData, AnimationType.NONE);
-				m_Results[target][phase] = new ResultData(tData, AnimationType.NONE);
+			case ActionType.GUARD:{
+                    switch (tData._type)
+                    {
+                        // エネミー通常攻撃
+                        case ActionType.NORMAL_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK_REPELLED);
+                            }
+                            break;
+                        // エネミーカウンター攻撃
+                        case ActionType.COUNTER_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.COUNTER_MATCH);
+                            }
+                            break;
+                        // エネミー防御
+                        case ActionType.GUARD:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD);
+                            }
+                            break;
+                        // エネミー防御破壊攻撃
+                        case ActionType.GUARD_BREAK_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD_BREAK);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                            }
+                            break;
+                    }
 			}
 			break;
+            // プレイヤー防御破壊攻撃
+            case ActionType.GUARD_BREAK_ATTACK:
+                {
+                    switch (tData._type)
+                    {
+                        // エネミー通常攻撃
+                        case ActionType.NORMAL_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                            }
+                            break;
+                        // エネミーカウンター攻撃
+                        case ActionType.COUNTER_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.COUNTER_ATTACK);
+                            }
+                            break;
+                        // エネミー防御
+                        case ActionType.GUARD:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD_BREAK);
+                            }
+                            break;
+                        // エネミー防御破壊攻撃
+                        case ActionType.GUARD_BREAK_ATTACK:
+                            {
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
+                                m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
+                            }
+                            break;
+                    }
+                }
+                break;
 		}
 	}
 }

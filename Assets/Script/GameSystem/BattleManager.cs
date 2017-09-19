@@ -384,25 +384,33 @@ public class BattleManager : MonoBehaviour
 					if (resultPahse.IsFirst())
 					{
 						StopCoroutine(m_BattleSlow);
-						BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-						BattleBoardData.skillChoiceBoard.SetActive(true);
-						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        m_BattleSlow = null;
+                        m_TimePhase = TimePhase.SLOW;
 					}
-					// スロー終了時
-					if (m_TimePhase == TimePhase.SLOW_END){
-						BattleBoardData.skillChoiceBoard.SetActive(false);
-						// 敵カード選択
-						GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
-						int eCardNum = target.skillManager.GetSkillCards().Count;
-						for (int i = 0; i < MAX_SELECTS; i++)
-						{
-							BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
-						}
-					}
-					// アニメーション終了
-					if (m_TimePhase == TimePhase.QUICK_END && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
-					{
-						resultPahse.Change(ResultPhase.SECOND);
+                    
+                    // アニメーション切り替えポイント到達時
+                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(true);
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
+
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                    }
+
+                    // アニメーション終了
+                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        // 敵カード選択
+                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
+                        int eCardNum = target.skillManager.GetSkillCards().Count;
+                        for (int i = 0; i < MAX_SELECTS; i++)
+                        {
+                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                        }
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
+
+                        resultPahse.Change(ResultPhase.SECOND);
 						resultPahse.Start();
 						return;
 					}
@@ -412,25 +420,70 @@ public class BattleManager : MonoBehaviour
 				{
 					if (resultPahse.IsFirst())
 					{
-						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
-					}
-					if (m_TimePhase == TimePhase.QUICK_END && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
-					{
-						resultPahse.Change(ResultPhase.THIRD);
+                        m_BattleSlow = null;
+                        m_TimePhase = TimePhase.SLOW;
+                        //BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
+                        //BattleBoardData.skillChoiceBoard.SetActive(true);
+                        //m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                    }
+                    // アニメーション切り替えポイント到達時
+                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(true);
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
+
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                    }
+
+                    // アニメーション終了
+                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        // 敵カード選択
+                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
+                        int eCardNum = target.skillManager.GetSkillCards().Count;
+                        for (int i = 0; i < MAX_SELECTS; i++)
+                        {
+                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                        }
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
+                        resultPahse.Change(ResultPhase.THIRD);
 						resultPahse.Start();
 						return;
 					}
 				}
 				break;
 			case ResultPhase.THIRD:
-				{
-					if (resultPahse.IsFirst())
-					{
-						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
-					}
-					if (m_TimePhase == TimePhase.QUICK_END && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
-					{
-						resultPahse.Change(ResultPhase.FOURTH);
+                {
+                    if (resultPahse.IsFirst())
+                    {
+                        m_BattleSlow = null;
+                        m_TimePhase = TimePhase.SLOW;
+                        //BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
+                        //BattleBoardData.skillChoiceBoard.SetActive(true);
+                        //m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                    }
+                    // アニメーション切り替えポイント到達時
+                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(true);
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
+
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                    }
+                    // アニメーション終了
+                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        // 敵カード選択
+                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
+                        int eCardNum = target.skillManager.GetSkillCards().Count;
+                        for (int i = 0; i < MAX_SELECTS; i++)
+                        {
+                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                        }
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
+                        resultPahse.Change(ResultPhase.FOURTH);
 						resultPahse.Start();
 						return;
 					}
@@ -440,9 +493,9 @@ public class BattleManager : MonoBehaviour
 				{
 					if (resultPahse.IsFirst())
 					{
-						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+						//m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
 					}
-					if (m_TimePhase == TimePhase.QUICK_END && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+					if ( m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
 					{
 						m_Player.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;
 						m_Target.transform.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;

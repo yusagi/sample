@@ -2,6 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum AnimationType
+{
+    ATTACK = 0,             // 通常攻撃
+    ATTACK_REPELLED,        // 攻撃はじかれ
+    COUNTER_ATTACK,         // カウンター攻撃
+    COUNTER_MATCH,          // カウンタースカし 
+    GUARD,                  // ガード
+    GUARD_BREAK,            // ガード崩壊
+    NONE,                   // なし
+}
 
 // アニメーションデータ
 public class AnmData
@@ -65,7 +75,7 @@ public class AnimationDataBase
                 { "DAMAGED00",     new AnmData("DAMAGED00",       0, 0.25f,   0, 0) },
             }
         },
-
+        // ジャブ（攻撃）
         {"Jab", new Dictionary<string, AnmData>
             {
                 { "Idle",       new AnmData("Idle",         0, 0.1f,    0.7f,   0) },
@@ -80,8 +90,11 @@ public class AnimationDataBase
 
                 { "DamageDown", new AnmData("DamageDown",   0, 0,       0.483f, 0) },
                 { "DAMAGED00",     new AnmData("DAMAGED00",       0, 0.1f,    0.483f, 0) },
+
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 0.483f, 0)},
             }
         },
+        // ハイキック（攻撃）
         {"Hikick", new Dictionary<string, AnmData>
             {
                 { "Idle",       new AnmData("Idle",         0, 0.25f,   0.66f,  0) },
@@ -96,8 +109,11 @@ public class AnimationDataBase
 
                 { "DamageDown", new AnmData("DamageDown",   0, 0,       0.66f,  0) },
                 { "DAMAGED00",     new AnmData("DAMAGED00",       0, 0.1f,    0.66f,  0) },
+
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 0.4f, 0)},
             }
         },
+        // スピンキック（攻撃）
         {"Spinkick", new Dictionary<string, AnmData>
             {
                 { "Idle",       new AnmData("Idle",         0, 0.1f,    0.68f,  0) },
@@ -112,8 +128,11 @@ public class AnimationDataBase
 
                 { "DamageDown", new AnmData("DamageDown",   0, 0.25f,   0.69f,  0) },
                 { "DAMAGED00",     new AnmData("DAMAGED00",       0, 0.1f,    0.69f,  0) },
+
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 0.6f, 0)},
             }
         },
+        // しゃがみ（カウンター）
         {"Land", new Dictionary<string, AnmData>
             {
                 { "Idle",       new AnmData("Idle",         0, 0.25f,   0,      0) },
@@ -130,6 +149,7 @@ public class AnimationDataBase
                 { "DAMAGED00",     new AnmData("DAMAGED00",       0, 0.25f,   0,      0) },
             }
         },
+        // 昇竜拳（攻撃）
         {"RISING_P", new Dictionary<string, AnmData>
             {
                 { "Idle",       new AnmData("Idle",         0, 0,       1,      0) },
@@ -143,6 +163,8 @@ public class AnimationDataBase
 
                 { "DamageDown", new AnmData("DamageDown",   0, 0,       0.77f,  0) },
                 //{ "DAMAGED00",     new AnmData("DAMAGED00",       0, 0,       0,      0) },
+
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 1, 0)},
             }
         },
         {"Counter_Slash", new Dictionary<string, AnmData>
@@ -194,13 +216,15 @@ public class AnimationDataBase
                 //{ "Damage",     new AnmData("Damage",       0, 0,       0,      0) },
             }
         },
+        // 防御
+        {"Guard", new Dictionary<string, AnmData>
+            { }
+        },
+        // 防御崩壊
+        {"GuardBreak", new Dictionary<string, AnmData>
+            { }
+        },
     };
-
-    // 再生アニメーションデータ取得
-    //public static Dictionary<string, AnmData> GetPlayData(string key)
-    //{
-
-    //}
 
     // 遷移データ取得
     public static AnmData GetTransData(string playKey, string transKey)
@@ -212,8 +236,8 @@ public class AnimationDataBase
 
         if (!TRANS_DATAS.ContainsKey(playKey) || !TRANS_DATAS[playKey].ContainsKey(transKey))
         {
-            Debug.LogError("CONTAINS");
-            Debug.LogError("playKey " + playKey + " transKey " + transKey);
+            //Debug.LogError("CONTAINS");
+            //Debug.LogError("playKey " + playKey + " transKey " + transKey);
             return new AnmData(playKey, 0, 0, 1, 0);
         }
 

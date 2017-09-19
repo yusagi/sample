@@ -59,7 +59,7 @@ public class AnimationManager : MonoBehaviour {
         m_PlayAnimation = StartCoroutine(setLoopAnimation(name));
     }
 
-    // アニメーション変更
+    // アニメーション変更(nextNameは再生時間の取得に使用)
     public void ChangeAnimationInFixedTime(string name, string nextName = null)
     {
         AnimationReset();
