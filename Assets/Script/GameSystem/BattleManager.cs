@@ -380,7 +380,7 @@ public class BattleManager : MonoBehaviour
 		{
 			case ResultPhase.FIRST:
 				{
-					// フェージ開始時
+					// フェーズ開始時
 					if (resultPahse.IsFirst())
 					{
 						StopCoroutine(m_BattleSlow);
@@ -394,7 +394,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
 
                     // アニメーション終了
@@ -432,7 +432,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
 
                     // アニメーション終了
@@ -469,7 +469,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
                     // アニメーション終了
                     if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())

@@ -105,15 +105,10 @@ public class GrgrCharCtrl : MonoBehaviour
 
     void Awake()
     {
-
         m_Planet = GameManager.m_Planet;
 
         // スキルマネージャー初期化
         skillManager = new SkillManager();
-        foreach (var sData in SkillDataBase.SKILL_DATAS)
-        {
-            skillManager.AddSkill(sData.Value);
-        }
 
         // grgrリジッドボディ初期化
         rigidbody = new Rigidbody_grgr(transform);
@@ -397,7 +392,7 @@ public class GrgrCharCtrl : MonoBehaviour
         rigidbody.isMove = true;
         rigidbody.velocity = impact;
         ascensionTimer = ASCENSION_TIME;
-        m_AnmMgr.ChangeAnimationInFixedTime("DamageDown", "Idle");
+        m_AnmMgr.ChangeAnimationInFixedTime("Damage_Down", "Idle");
     }
 
     void Ascension()
@@ -634,7 +629,15 @@ public class GrgrCharCtrl : MonoBehaviour
                 {
                     SkillData data = controller.GetSkillData(gameObject, resultPhase);
 
-                    m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
+                    }
 
                     damage = data._attack;
                 }
@@ -642,41 +645,97 @@ public class GrgrCharCtrl : MonoBehaviour
             // 攻撃はじかれ
             case AnimationType.ATTACK_REPELLED:
                 {
-                    m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
+                    SkillData data = controller.GetSkillData(gameObject, resultPhase);
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
+                        //m_AnmMgr.ChainAnimation("DAMAGED00");
+                    }
                 }
                 break;
             // カウンター攻撃
             case AnimationType.COUNTER_ATTACK:
                 {
-                    SkillData data = controller.GetSkillData(gameObject, resultPhase);
+                    SkillData myData = controller.GetSkillData(gameObject, resultPhase);
+                    SkillData tData = controller.GetSkillData(target, resultPhase);
 
-                    m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
-                    m_AnmMgr.ChainAnimation("RISING_P", "AttackCommon");
-                    damage = data._attack;
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("SAMK");
+                    }
+                    else
+                    {
+                        //m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
+                        m_AnmMgr.ChangeAnimationInFixedTime("SAMK", "AttackCommon");
+                    }
+
+                    damage = tData._attack;
                     hp += damage;
                 }
                 break;
             // カウンタースカし
             case AnimationType.COUNTER_MATCH:
                 {
-                    m_AnmMgr.ChangeAnimationInFixedTime("Land");
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Land");
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Land", "AttackCommon");
+                    }
                 }
                 break;
             // 防御
             case AnimationType.GUARD:
                 {
-                    m_AnmMgr.ChangeAnimationLoopInFixedTime("Guard");
+                    SkillData tData = controller.GetSkillData(target, resultPhase);
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Guard");
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Guard", "AttackCommon");
+                    }
+
+                    hp += tData._attack;
                 }
                 break;
             // 防御崩壊
             case AnimationType.GUARD_BREAK:
                 {
-                    m_AnmMgr.ChangeAnimationLoopInFixedTime("GuardBreak");
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("GuardBreak");
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("GuardBreak", "AttackCommon");
+                    }
                 }
                 break;
+            // アニメーションなし
             case AnimationType.NONE:
                 {
-                    m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Idle");
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("Idle", "AttackCommon");
+                    }
                 }
                 break;
         }

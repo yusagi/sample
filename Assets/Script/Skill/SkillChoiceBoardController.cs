@@ -86,6 +86,12 @@ public class SkillChoiceBoardController : MonoBehaviour {
         m_CardsUI.Add(card);
 	}
 
+    public void CutCardObject(GameObject card)
+    {
+        m_CardsUI.Remove(card);
+        GameObject.Destroy(card);
+    }
+
 	public void AddChoice(SkillData card, GameObject charactor){
 		m_Choices[charactor].Add(card);
 	}
@@ -103,6 +109,11 @@ public class SkillChoiceBoardController : MonoBehaviour {
 
         return (m_Results[charactor])[phase]._skill;
 	}
+
+    public bool IsResult(GameObject charactor, BattleManager.ResultPhase phase)
+    {
+        return m_Results[charactor].ContainsKey(phase);
+    }
 
 	// プレイヤーの選んだ枚数
 	public int GetChoiceCount(GameObject charactor){

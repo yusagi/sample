@@ -22,6 +22,10 @@ public class GameManager : MonoBehaviour {
         m_Player.name = "Player";
         m_Player.layer = (int)Layer.PLAYER;
         m_Player.transform.SetParent(transform, true);
+        foreach(var data in SkillDataBase.PLAYER_DATAS)
+        {
+            m_Player.GetComponent<GrgrCharCtrl>().skillManager.AddSkill(data.Value);
+        }
 
         // エネミー
         m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
@@ -29,6 +33,10 @@ public class GameManager : MonoBehaviour {
         m_Enemy.layer = (int)Layer.ENEMY;
         m_Enemy.transform.rotation = Quaternion.AngleAxis(180.0f, Vector3.right) * Quaternion.identity;
         m_Enemy.transform.SetParent(transform, true);
+        foreach (var data in SkillDataBase.ENEMY_DATAS)
+        {
+            m_Enemy.GetComponent<GrgrCharCtrl>().skillManager.AddSkill(data.Value);
+        }
 
         // ピラー
         transform.FindChild("PillerContents").gameObject.SetActive(true);

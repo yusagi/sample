@@ -35,7 +35,7 @@ public class AnimationManager : MonoBehaviour {
 	private Coroutine m_PlayAnimation;		// アニメーション状態遷移コルーチン
 	private List<AnmData> m_AnmList = new List<AnmData>();		// 再生アニメーションリスト
 	private float m_PrevTime;				// 前フレームのアニメーションのNormalize時間
-    private System.Action<float> m_EndIntervention; // 終了時間変更の介入処理
+    private System.Action<int> m_EndIntervention; // 終了時間変更の介入処理
     private Coroutine m_ChainAnimation;     // 連続アニメーションコルーチン
     private List<ChainAnmData> m_ChainAnmList = new List<ChainAnmData>(); // 連続アニメーションリスト
 	
@@ -90,17 +90,17 @@ public class AnimationManager : MonoBehaviour {
     }
 
     // アニメーション変更
-    private void ChangeAnimationInFixedTime(string name, int layer, float durationTime, float endTime, float fixedTime)
+    private void ChangeAnimationInFixedTime(string name, int layer, float durationTime, int endFrame, float fixedTime)
     {
-        AnmData data = new AnmData(name, layer, durationTime, endTime, fixedTime);
+        AnmData data = new AnmData(name, layer, durationTime, endFrame, fixedTime);
         m_AnmList.Add(data);
         m_PlayAnimation = StartCoroutine(playAnimation());
     }
 
     // 再生中のアニメーションのあとに続けてアニメーションを再生する(ループでないアニメーションに限る)
-    private void ChainAnimation(string name, int layer, float durationTime, float endTime, float fixedTime)
+    private void ChainAnimation(string name, int layer, float durationTime, int endFrame, float fixedTime)
     {
-        AnmData data = new AnmData(name, layer, durationTime, endTime, fixedTime);
+        AnmData data = new AnmData(name, layer, durationTime, endFrame, fixedTime);
         m_AnmList.Add(data);
     }
 
@@ -132,17 +132,13 @@ public class AnimationManager : MonoBehaviour {
 
         // 開始
         m_AnmState = AnmState.PLAY;
-        
         // アニメーション中
-        float length = m_Animator.GetCurrentAnimatorStateInfo(0).length;
-        float time = length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-        float endTime = GetEndTime(data._name) * data._endNormalizeTime;
+        int endFrame = data._endFrame;
         // 終了時間変更の介入処理設定
-        m_EndIntervention = (end) => { endTime = end; };
-        while(time < endTime)
+        m_EndIntervention = (end) => { endFrame = end; };
+        while(GetFrame() < endFrame)
         {
             yield return null;
-            time = length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
         }
         m_EndIntervention = null;
 
@@ -186,7 +182,7 @@ public class AnimationManager : MonoBehaviour {
         }
 
         // 再生するアニメーションデータを取得
-        AnmData data = AnimationDataBase.GetTransData(name, currentName);
+        AnmData data = GetTransData(name, currentName);
 
         m_PlayAnimation = null;
         ChangeAnimationLoopInFixedTime(name, data._layer, data._durationTime, data._fixedTime);
@@ -208,10 +204,10 @@ public class AnimationManager : MonoBehaviour {
         }
 
         // 再生するアニメーションデータを取得
-        AnmData data = AnimationDataBase.GetTransData(name, currentName);
-        float endTime = AnimationDataBase.GetTransData(name, nextName)._endNormalizeTime;
+        AnmData data = GetTransData(name, currentName);
+        int endFrame = GetTransData(name, nextName)._endFrame;
 
-        ChangeAnimationInFixedTime(name, data._layer, data._durationTime, endTime, data._fixedTime);
+        ChangeAnimationInFixedTime(name, data._layer, data._durationTime, endFrame, data._fixedTime);
         yield return null;
     }
 
@@ -236,10 +232,10 @@ public class AnimationManager : MonoBehaviour {
 
         // 再生するアニメーションデータを取得
         string currentName = m_AnmList[0]._name;
-        AnmData data = AnimationDataBase.GetTransData(name, currentName);
-        float endTime = AnimationDataBase.GetTransData(name, nextName)._endNormalizeTime;
+        AnmData data = GetTransData(name, currentName);
+        int endFrame = GetTransData(name, nextName)._endFrame;
 
-        ChainAnimation(name, data._layer, data._durationTime, endTime, data._fixedTime);
+        ChainAnimation(name, data._layer, data._durationTime, endFrame, data._fixedTime);
 
         m_ChainAnmList.Remove(chainData);
         if (m_ChainAnmList.Count > 0)
@@ -253,11 +249,11 @@ public class AnimationManager : MonoBehaviour {
     }
 
     // 再生中アニメーションの終了時間を介入して変更
-    public void EndIntervention(float endTime)
+    public void EndIntervention(int endFrame)
     {
         if (m_EndIntervention != null)
         {
-            m_EndIntervention(endTime);
+            m_EndIntervention(endFrame);
         }
     }
 
@@ -298,8 +294,7 @@ public class AnimationManager : MonoBehaviour {
     // 現在フレーム取得
     public int GetFrame()
     {
-        float time = m_Animator.GetCurrentAnimatorStateInfo(0).length * m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-        return TimeToFrame(time);
+        return TimeToFrame(GetTime());
     }
 
     // 現在時間取得
@@ -336,6 +331,26 @@ public class AnimationManager : MonoBehaviour {
         {
             return null;
         }
+    }
+
+    // 遷移データ取得
+    public AnmData GetTransData(string playKey, string transKey)
+    {
+        if (string.IsNullOrEmpty(playKey) || string.IsNullOrEmpty(transKey))
+        {
+            int endFrame = TimeToFrame(GetEndTime(playKey));
+            return new AnmData("NONE", 0, 0, endFrame, 0);
+        }
+
+        if (!AnimationDataBase.TRANS_DATAS.ContainsKey(playKey) || !AnimationDataBase.TRANS_DATAS[playKey].ContainsKey(transKey))
+        {
+            //Debug.LogError("CONTAINS");
+            //Debug.LogError("playKey " + playKey + " transKey " + transKey);
+            int endFrame = TimeToFrame(GetEndTime(playKey));
+            return new AnmData(playKey, 0, 0, endFrame, 0);
+        }
+
+        return AnimationDataBase.TRANS_DATAS[playKey][transKey];
     }
 
     // アニメーションリセット

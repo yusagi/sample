@@ -25,11 +25,19 @@ public class SkillData{
 }
 
 public class SkillDataBase{
-	public static Dictionary<string, SkillData> SKILL_DATAS = new Dictionary<string, SkillData>(){
+	public static Dictionary<string, SkillData> PLAYER_DATAS = new Dictionary<string, SkillData>(){
 		{"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
 		{"Hikick", new SkillData("キック","Hikick", 15, 30, ActionType.NORMAL_ATTACK)},
-		{"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.NORMAL_ATTACK)},
+		{"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.GUARD_BREAK_ATTACK)},
 		{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
 		{"Guard", new SkillData("ガード", "Guard", 5, 0, ActionType.GUARD)},
 	};
+
+    public static Dictionary<string, SkillData> ENEMY_DATAS = new Dictionary<string, SkillData>(){
+        {"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
+        {"Hikick", new SkillData("キック","Hikick", 15, 30, ActionType.NORMAL_ATTACK)},
+        {"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.GUARD_BREAK_ATTACK)},
+        {"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
+        {"Guard", new SkillData("ガード", "Guard", 5, 0, ActionType.GUARD)},
+    };
 }

@@ -38,6 +38,9 @@ public class SkillCardUI : MonoBehaviour {
 
 			m_Image.color = new Color(m_Image.color.r, m_Image.color.g, m_Image.color.b, 0.5f);
 			controller.AddChoice(m_Data, GameManager.m_Player);
+
+            // カードオブジェクト消去
+            controller.CutCardObject(gameObject);
 		}
 		else{
 			controller.m_PlayerAP += m_Data._ap;

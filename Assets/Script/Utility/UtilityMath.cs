@@ -291,7 +291,7 @@ public class UtilityMath
 		float st = start;
 		float en = end;
 		float t = 0.0f;
-		while(t < time){
+		while(t <= time){
 			if (isUnScale){
 				t += Time.unscaledDeltaTime;
 			}
@@ -309,7 +309,7 @@ public class UtilityMath
 		Quaternion st = start;
 		Quaternion en = end;
 		float t = 0.0f;
-		while(t < time){
+		while(t <= time){
 			if (isUnScale){
 				t += Time.unscaledDeltaTime;
 			}
@@ -327,7 +327,7 @@ public class UtilityMath
 		Vector3 st = start;
 		Vector3 en = end;
 		float t = 0.0f;
-		while(t < time){
+		while(t <= time){
 			if (isUnScale){
 				t += Time.unscaledDeltaTime;
 			}
