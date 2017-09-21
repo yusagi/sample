@@ -5,8 +5,8 @@ using UnityEngine;
 public enum ActionType{
 	NORMAL_ATTACK = 0,  // 通常攻撃
 	COUNTER_ATTACK,     // カウンター攻撃
-	GUARD,              // ガード
     GUARD_BREAK_ATTACK, // ガード破壊攻撃        
+    GUARD,              // ガード
 }
 
 public class SkillData{
@@ -29,7 +29,7 @@ public class SkillDataBase{
 		{"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
 		{"Hikick", new SkillData("キック","Hikick", 15, 30, ActionType.NORMAL_ATTACK)},
 		{"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.GUARD_BREAK_ATTACK)},
-		{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
+		//{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
 		{"Guard", new SkillData("ガード", "Guard", 5, 0, ActionType.GUARD)},
 	};
 
@@ -37,7 +37,7 @@ public class SkillDataBase{
         {"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
         {"Hikick", new SkillData("キック","Hikick", 15, 30, ActionType.NORMAL_ATTACK)},
         {"Spinkick", new SkillData("スピンキック", "Spinkick", 20, 50, ActionType.GUARD_BREAK_ATTACK)},
-        {"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
+        //{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},
         {"Guard", new SkillData("ガード", "Guard", 5, 0, ActionType.GUARD)},
     };
 }

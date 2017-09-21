@@ -706,8 +706,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     {
                         m_AnmMgr.ChangeAnimationInFixedTime("Guard", "AttackCommon");
                     }
-
-                    hp += tData._attack;
                 }
                 break;
             // 防御崩壊
@@ -721,6 +719,20 @@ public class GrgrCharCtrl : MonoBehaviour
                     else
                     {
                         m_AnmMgr.ChangeAnimationInFixedTime("GuardBreak", "AttackCommon");
+                    }
+                }
+                break;
+            // 防御崩壊攻撃はじかれ
+            case AnimationType.GUARD_BREAK_ATTACK_REPELLED:
+                {
+                    // 4フェーズ目だけフルでアニメーション
+                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("SpinkickBreak");
+                    }
+                    else
+                    {
+                        m_AnmMgr.ChangeAnimationInFixedTime("SpinkickBreak", "AttackCommon");
                     }
                 }
                 break;

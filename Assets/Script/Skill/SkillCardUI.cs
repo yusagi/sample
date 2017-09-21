@@ -7,7 +7,7 @@ public class SkillCardUI : MonoBehaviour {
 
 	private Image m_Image;
 	private bool m_IsChoice = false;
-	public SkillData m_Data{get;set;}
+	private SkillData m_Data{get;set;}
 
 	void Awake(){
 		m_Image = GetComponent<Image>();
@@ -23,10 +23,24 @@ public class SkillCardUI : MonoBehaviour {
 		
 	}
 
+    // スキルデータ取得
+    public SkillData GetSkillData()
+    {
+        return m_Data;
+    }
+
+    // スキルデータ追加
+    public void AddCardData(SkillData data)
+    {
+        m_Data = data;
+        m_Image.color = GetColor(data._type);
+    }
+
+    // カード選択
 	public void Choice(){
 		m_IsChoice = !m_IsChoice;
 
-		SkillChoiceBoardController controller = transform.parent.parent.GetComponent<SkillChoiceBoardController>();
+		SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
 
 		if (m_IsChoice){
 			int tmp = controller.m_PlayerAP - m_Data._ap;
@@ -40,7 +54,7 @@ public class SkillCardUI : MonoBehaviour {
 			controller.AddChoice(m_Data, GameManager.m_Player);
 
             // カードオブジェクト消去
-            controller.CutCardObject(gameObject);
+            controller.CutCardObject(gameObject, SkillChoiceBoardController.USER.PLAYER);
 		}
 		else{
 			controller.m_PlayerAP += m_Data._ap;
@@ -49,4 +63,18 @@ public class SkillCardUI : MonoBehaviour {
 			controller.CutChoice(m_Data, GameManager.m_Player);
 		}
 	}
+
+    // アクションタイプ別カラー取得
+    Color GetColor(ActionType type)
+    {
+        switch (type)
+        {
+            case ActionType.NORMAL_ATTACK: return Color.red;
+            case ActionType.GUARD_BREAK_ATTACK: return Color.green;
+            case ActionType.GUARD: return Color.blue;
+        }
+
+        Debug.LogError("out of range");
+        return Color.black;
+    }
 }

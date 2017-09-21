@@ -194,9 +194,21 @@ public class BattleManager : MonoBehaviour
 							var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
 							GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
 							instance.name = card._name;
-							instance.GetComponent<SkillCardUI>().m_Data = card;
-							skillChoiceBoard.AddCardObject(instance);
+							instance.GetComponent<SkillCardUI>().AddCardData(card);
+							skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.PLAYER);
 						}
+
+                        // 敵カード生成
+                        GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
+                        int tCardNum = target.skillManager.GetSkillCards().Count;
+                        for (int i = 0; i < MAX_CHOICES; i++)
+                        {
+                            var card = target.skillManager.GetSkillCards()[Random.Range(0, tCardNum)];
+                            GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+                            instance.name = card._name;
+                            instance.GetComponent<SkillCardUI>().AddCardData(card);
+                            skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.TARGET);
+                        }
 
 						// プレイヤーのAPを設定
 						skillChoiceBoard.m_PlayerAP = (int)(m_Player.GetComponent<GrgrCharCtrl>().rigidbody.GetSpeed() * 3.6f);
@@ -220,16 +232,18 @@ public class BattleManager : MonoBehaviour
 
 						if (skillChoiceBoard.GetChoiceCount(m_Player.gameObject) > 0)
 						{
-							// 敵カード選択
-							GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
-							int eCardNum = target.skillManager.GetSkillCards().Count;
+                            // 敵カード選択
+                            int tCardNum = skillChoiceBoard.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
 							for (int i = 0; i < MAX_SELECTS; i++)
 							{
-								skillChoiceBoard.AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                                GameObject card = skillChoiceBoard.GetCardList(SkillChoiceBoardController.USER.TARGET)[Random.Range(0, tCardNum)];
+								skillChoiceBoard.AddChoice(card.GetComponent<SkillCardUI>().GetSkillData(), m_Target.gameObject);
+                                skillChoiceBoard.CutCardObject(card, SkillChoiceBoardController.USER.TARGET);   
 							}
 
-							// 敵のバトル状態設定
-							Vector3 line = m_Target.transform.position - m_Player.position;
+                            // 敵のバトル状態設定
+                            GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
+                            Vector3 line = m_Target.transform.position - m_Player.position;
 							Vector3 halfPos = m_Player.position + (line * 0.5f);
 							Vector3 up = (halfPos - GameManager.m_Planet.transform.position);
 							Vector3 pFront = Vector3.ProjectOnPlane(m_Player.forward, up).normalized;
@@ -397,17 +411,25 @@ public class BattleManager : MonoBehaviour
                         m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
 
+                    // スキルUI消去
+                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                    }
+
                     // アニメーション終了
                     if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
                     {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
                         // 敵カード選択
-                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
-                        int eCardNum = target.skillManager.GetSkillCards().Count;
-                        for (int i = 0; i < MAX_SELECTS; i++)
-                        {
-                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
-                        }
+                        SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
+                        int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
+						for (int i = 0; i < MAX_SELECTS; i++)
+						{
+                            GameObject card = controller.GetCardList(SkillChoiceBoardController.USER.TARGET)[Random.Range(0, tCardNum)];
+							controller.AddChoice(card.GetComponent<SkillCardUI>().GetSkillData(), m_Target.gameObject);
+                            controller.CutCardObject(card, SkillChoiceBoardController.USER.TARGET);
+						}
+
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
 
                         resultPahse.Change(ResultPhase.SECOND);
@@ -435,17 +457,25 @@ public class BattleManager : MonoBehaviour
                         m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
 
+                    // スキルUI消去
+                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                    }
+
                     // アニメーション終了
                     if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
                     {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
                         // 敵カード選択
-                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
-                        int eCardNum = target.skillManager.GetSkillCards().Count;
+                        SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
+                        int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
                         for (int i = 0; i < MAX_SELECTS; i++)
                         {
-                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                            GameObject card = controller.GetCardList(SkillChoiceBoardController.USER.TARGET)[Random.Range(0, tCardNum)];
+                            controller.AddChoice(card.GetComponent<SkillCardUI>().GetSkillData(), m_Target.gameObject);
+                            controller.CutCardObject(card, SkillChoiceBoardController.USER.TARGET);
                         }
+
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
                         resultPahse.Change(ResultPhase.THIRD);
 						resultPahse.Start();
@@ -471,17 +501,26 @@ public class BattleManager : MonoBehaviour
 
                         m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
                     }
+
+                    // スキルUI消去
+                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                    }
+
                     // アニメーション終了
                     if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
                     {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
                         // 敵カード選択
-                        GrgrCharCtrl target = m_Target.transform.GetComponent<GrgrCharCtrl>();
-                        int eCardNum = target.skillManager.GetSkillCards().Count;
+                        SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
+                        int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
                         for (int i = 0; i < MAX_SELECTS; i++)
                         {
-                            BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().AddChoice(target.skillManager.GetSkillCards()[Random.Range(0, eCardNum)], m_Target.gameObject);
+                            GameObject card = controller.GetCardList(SkillChoiceBoardController.USER.TARGET)[Random.Range(0, tCardNum)];
+                            controller.AddChoice(card.GetComponent<SkillCardUI>().GetSkillData(), m_Target.gameObject);
+                            controller.CutCardObject(card, SkillChoiceBoardController.USER.TARGET);
                         }
+
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
                         resultPahse.Change(ResultPhase.FOURTH);
 						resultPahse.Start();
