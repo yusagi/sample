@@ -16,13 +16,31 @@ public class SampleAnmComb : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		if (Input.GetKeyDown(KeyCode.Z)){
-			//Dbg.ClearConsole();
-			if (m_AnmCor != null){
-				StopCoroutine(m_AnmCor);
-			}
-			m_AnmCor = StartCoroutine(AnmComb());
-		}
-	}
+            m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
+        }
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
+        }
+
+
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            m_AnmMgr.ChangeAnimationInFixedTime("RISING_P", "AttackCommon");
+        }
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            m_AnmMgr.ChangeAnimationInFixedTime("Jab", "AttackCommon");
+        }
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            m_AnmMgr.ChangeAnimationInFixedTime("Hikick", "AttackCommon");
+        }
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            m_AnmMgr.ChangeAnimationInFixedTime("Spinkick", "AttackCommon");
+        }
+    }
 
 	IEnumerator AnmComb()
     {

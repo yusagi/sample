@@ -226,6 +226,7 @@ public class GrgrCharCtrl : MonoBehaviour
                 {
                     if (state.IsFirst())
                     {
+                        Debug.Log(name);
                         m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
                     }
 
@@ -571,10 +572,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
                     }
-                    while (m_AnmMgr.IsAnmEnd())
-                    {
-                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
-                    }
                 }
                 break;
             case BattleManager.ResultPhase.SECOND:
@@ -582,10 +579,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     if (BattleManager._instance.resultPahse.IsFirst())
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
-                    }
-                    while (m_AnmMgr.IsAnmEnd())
-                    {
-                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
                 }
                 break;
@@ -595,10 +588,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
                     }
-                    while (m_AnmMgr.IsAnmEnd())
-                    {
-                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
-                    }
                 }
                 break;
             case BattleManager.ResultPhase.FOURTH:
@@ -606,10 +595,6 @@ public class GrgrCharCtrl : MonoBehaviour
                     if (BattleManager._instance.resultPahse.IsFirst())
                     {
                         BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
-                    }
-                    while (m_AnmMgr.IsAnmEnd())
-                    {
-                        m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
                     }
                 }
                 break;

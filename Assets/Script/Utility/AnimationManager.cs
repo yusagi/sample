@@ -198,7 +198,6 @@ public class AnimationManager : MonoBehaviour {
         string currentName = GetName();
         while(currentName == null)
         {
-            Debug.Log("GetName");
             yield return null;
             currentName = GetName();
         }

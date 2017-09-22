@@ -192,7 +192,7 @@ public class BattleManager : MonoBehaviour
 						for (int i = 0; i < MAX_CHOICES; i++)
 						{
 							var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
-							GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+							GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard 1"));
 							instance.name = card._name;
 							instance.GetComponent<SkillCardUI>().AddCardData(card);
 							skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.PLAYER);
@@ -204,7 +204,7 @@ public class BattleManager : MonoBehaviour
                         for (int i = 0; i < MAX_CHOICES; i++)
                         {
                             var card = target.skillManager.GetSkillCards()[Random.Range(0, tCardNum)];
-                            GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+                            GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard 1"));
                             instance.name = card._name;
                             instance.GetComponent<SkillCardUI>().AddCardData(card);
                             skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.TARGET);
@@ -408,7 +408,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
                     }
 
                     // スキルUI消去
@@ -454,7 +454,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
                     }
 
                     // スキルUI消去
@@ -499,7 +499,7 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.SetActive(true);
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
 
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 1));
+                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
                     }
 
                     // スキルUI消去
@@ -559,7 +559,7 @@ public class BattleManager : MonoBehaviour
 		{
 			Time.timeScale = speed.Current;
 
-			if (board.GetChoiceCount(m_Player.gameObject) == MAX_SELECTS || board.m_PlayerAP < 10)
+			if (board.GetChoiceCount(m_Player.gameObject) == MAX_SELECTS)
 			{
 				m_TimePhase = TimePhase.SLOW_END;
 				yield return null;
@@ -578,7 +578,7 @@ public class BattleManager : MonoBehaviour
 			{
 				time += Time.unscaledDeltaTime;
 
-				if (board.GetChoiceCount(m_Player.gameObject) == MAX_SELECTS || board.m_PlayerAP < 10)
+				if (board.GetChoiceCount(m_Player.gameObject) == MAX_SELECTS)
 				{
 					break;
 				}
@@ -600,7 +600,7 @@ public class BattleManager : MonoBehaviour
 			yield return null;
 		}
 
-		Time.timeScale = 1.0f;
+		Time.timeScale = 1;
 		m_TimePhase = TimePhase.QUICK_END;
 		yield return null;
 	}
