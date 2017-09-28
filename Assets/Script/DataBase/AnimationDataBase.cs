@@ -18,21 +18,25 @@ public enum AnimationType
 public class AnmData
 {
 
-    public AnmData(string name, int layer, float durationTime, int endFrame, float fixedTime)
-    {
+    public AnmData(string name, int layer, float durationTime, int endFrame, float offsetTime, float slowEndFrame = 0, float slowStartFrame = 0)
+    { 
         _name = name;
         _layer = layer;
         _durationTime = durationTime;
         _endFrame = endFrame;
-        _fixedTime = fixedTime;
-
+        _offsetTime = offsetTime;
+       _slowEndFrame = slowEndFrame;
+       _slowStartFrame = slowStartFrame;
     }
 
-    public string _name;
-    public int _layer;
-    public float _durationTime;
-    public int _endFrame;
-    public float _fixedTime;
+    public string _name;        // 名前
+    public int _layer;          // アニメーターレイヤー
+    public float _durationTime; // 補間時間(秒)
+    public int _endFrame;       // 終了フレーム
+    public float _offsetTime;   // 次のアニメーションの再生開始時間(秒)
+    
+    public float _slowEndFrame;     // スロー終了フレーム
+    public float _slowStartFrame;   // スロー開始フレーム
 }
 
 public class AnimationDataBase
@@ -108,85 +112,85 @@ public class AnimationDataBase
         {"Jab", new Dictionary<string, AnmData>
             {
                 // 状態系アニメーション
-                { "Idle",       new AnmData("Idle",             0, 0.1f,    14, 0) },
-                { "Run",        new AnmData("Run",              0, 0.1f,    14, 0) },
-                { "Damage_Down", new AnmData("Damage_Down",     0, 0.1f,    14, 0) },
-                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.1f,    14, 0) },
+                { "Idle",       new AnmData("Idle",             0, 0.05f,    14, 0, 0, 25) },
+                { "Run",        new AnmData("Run",              0, 0.05f,    14, 0, 0, 25) },
+                { "Damage_Down", new AnmData("Damage_Down",     0, 0.05f,    14, 0, 0, 25) },
+                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.05f,    14, 0, 0, 25) },
 
                 // 攻撃系アニメーション
-                { "Jab",        new AnmData("Jab",              0, 0.1f,    28, 0) },
-                { "Hikick",     new AnmData("Hikick",           0, 0.1f,    14, 0) },
-                { "Spinkick",   new AnmData("Spinkick",         0, 0.1f,    14, 0) },
-                { "RISING_P",   new AnmData("RISING_P",         0, 0.1f,    14, 0) },
-                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.1f,    14, 0) },
-                { "SAMK",       new AnmData("SAMK",             0, 0.1f,    14, 0) },
+                { "Jab",        new AnmData("Jab",              0, 0.05f,    28, 0, 0, 25) },
+                { "Hikick",     new AnmData("Hikick",           0, 0.05f,    14, 0, 0, 25) },
+                { "Spinkick",   new AnmData("Spinkick",         0, 0.05f,    14, 0, 0, 25) },
+                { "RISING_P",   new AnmData("RISING_P",         0, 0.05f,    14, 0, 0, 25) },
+                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.05f,    14, 0, 0, 25) },
+                { "SAMK",       new AnmData("SAMK",             0, 0.05f,    14, 0, 0, 25) },
 
                 // 防御系アニメーション
-                { "Land",       new AnmData("Land",             0, 0.1f,    14, 0) },
-                { "Guard",      new AnmData("Guard",            0, 0.1f,    14, 0) },
+                { "Land",       new AnmData("Land",             0, 0.05f,    14, 0, 0, 25) },
+                { "Guard",      new AnmData("Guard",            0, 0.05f,    14, 0, 0, 25) },
 
                 // 崩壊系アニメーション
-                { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,   14, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.1f,   14, 0) },
+                { "GuardBreak", new AnmData("GuardBreak",       0, 0.05f,   14, 0, 0, 25) },
+                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.05f,   14, 0, 0, 25) },
 
                 // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 0, 25)},
             }
         },
         // ハイキック（攻撃）
         {"Hikick", new Dictionary<string, AnmData>
             {
                 // 状態系アニメーション
-                { "Idle",       new AnmData("Idle",             0, 0.25f,   29, 0) },
-                { "Run",        new AnmData("Run",              0, 0.25f,   29, 0) },
-                { "Damage_Down", new AnmData("Damage_Down",     0, 0.25f,   29, 0) },
-                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.25f,   29, 0) },
+                { "Idle",       new AnmData("Idle",             0, 0.1f,   29, 0, 5, 17) },
+                { "Run",        new AnmData("Run",              0, 0.1f,   29, 0, 5, 17) },
+                { "Damage_Down", new AnmData("Damage_Down",     0, 0.1f,   29, 0, 5, 17) },
+                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.1f,   29, 0, 5, 17) },
 
                 // 攻撃系アニメーション
-                { "Jab",        new AnmData("Jab",              0, 0.25f,   29, 0) },
-                { "Hikick",     new AnmData("Hikick",           0, 0.25f,   29, 0) },
-                { "Spinkick",   new AnmData("Spinkick",         0, 0.25f,   29, 0) },
-                { "RISING_P",   new AnmData("RISING_P",         0, 0.25f,   29, 0) },
-                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.25f,   29, 0) },
+                { "Jab",        new AnmData("Jab",              0, 0.1f,   29, 0, 5, 17) },
+                { "Hikick",     new AnmData("Hikick",           0, 0.1f,   29, 0, 5, 17) },
+                { "Spinkick",   new AnmData("Spinkick",         0, 0.1f,   29, 0, 5, 17) },
+                { "RISING_P",   new AnmData("RISING_P",         0, 0.1f,   29, 0, 5, 17) },
+                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.1f,   29, 0, 5, 17) },
 
                 // 防御系アニメーション
-                { "Land",       new AnmData("Land",             0, 0.25f,   29, 0) },
-                { "Guard",      new AnmData("Guard",            0, 0.25f,   29, 0) },
+                { "Land",       new AnmData("Land",             0, 0.1f,   29, 0, 5, 17) },
+                { "Guard",      new AnmData("Guard",            0, 0.1f,   29, 0, 5, 17) },
 
                 // 崩壊系アニメーション
-                { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   29, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   29, 0) },
+                { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,   29, 0, 5, 17) },
+                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.1f,   29, 0, 5, 17) },
 
                 // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 10, 17)},
             }
         },
         // スピンキック（攻撃）
         {"Spinkick", new Dictionary<string, AnmData>
             {
                 // 状態系アニメーション
-                { "Idle",       new AnmData("Idle",             0, 0.1f,    31, 0) },
-                { "Run",        new AnmData("Run",              0, 0.1f,    31, 0) },
-                { "Damage_Down", new AnmData("Damage_Down",     0, 0.1f,    31, 0) },
-                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.1f,    31, 0) },
+                { "Idle",       new AnmData("Idle",             0, 0.05f,    31, 0, 7, 20) },
+                { "Run",        new AnmData("Run",              0, 0.05f,    31, 0, 7, 20) },
+                { "Damage_Down", new AnmData("Damage_Down",     0, 0.05f,    31, 0, 7, 20) },
+                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.05f,    31, 0, 7, 20) },
 
                 // 攻撃系アニメーション
-                { "Jab",        new AnmData("Jab",              0, 0.1f,    31, 0) },
-                { "Hikick",     new AnmData("Hikick",           0, 0.1f,    31, 0) },
-                { "Spinkick",   new AnmData("Spinkick",         0, 0.1f,    31, 0) },
-                { "RISING_P",   new AnmData("RISING_P",         0, 0.1f,    31, 0) },
-                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.1f,    31, 0) },
+                { "Jab",        new AnmData("Jab",              0, 0.05f,    31, 0, 7, 20) },
+                { "Hikick",     new AnmData("Hikick",           0, 0.05f,    31, 0, 7, 20) },
+                { "Spinkick",   new AnmData("Spinkick",         0, 0.05f,    31, 0, 7, 20) },
+                { "RISING_P",   new AnmData("RISING_P",         0, 0.05f,    31, 0, 7, 20) },
+                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.05f,    31, 0, 7, 20) },
 
                 // 防御系アニメーション
-                { "Land",       new AnmData("Land",             0, 0.1f,    31, 0) },
-                { "Guard",      new AnmData("Guard",            0, 0.1f,    31, 0) },
+                { "Land",       new AnmData("Land",             0, 0.05f,    31, 0, 7, 20) },
+                { "Guard",      new AnmData("Guard",            0, 0.05f,    31, 0, 7, 20) },
 
                 // 崩壊系アニメーション
-                { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,    31, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.1f,    31, 0) },
+                { "GuardBreak", new AnmData("GuardBreak",       0, 0.05f,    31, 0, 7, 20) },
+                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.05f,    31, 0, 7, 20) },
 
                 // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 7, 20)},
             }
         },
         // しゃがみ（カウンター）

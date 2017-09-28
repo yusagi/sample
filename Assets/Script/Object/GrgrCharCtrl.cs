@@ -226,7 +226,6 @@ public class GrgrCharCtrl : MonoBehaviour
                 {
                     if (state.IsFirst())
                     {
-                        Debug.Log(name);
                         m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
                     }
 

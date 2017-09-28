@@ -61,9 +61,12 @@ public class BattleManager : MonoBehaviour
 
 	// フラグ
 	private bool battleStart { get; set; }
+    private bool m_SlowStart = false;
+    private bool m_SlowEnd = false;
+    private bool m_IsChoice = false;
 
-	// スロー状態
-	private TimePhase m_TimePhase;
+    // スロー状態
+    private TimePhase m_TimePhase;
 
 	// タイマー
 	float battleInterval = -1;
@@ -225,9 +228,9 @@ public class BattleManager : MonoBehaviour
 					currentAP.text = skillChoiceBoard.m_PlayerAP.ToString() + "AP";
 
 					// スキル選択へ
-					if (m_TimePhase == TimePhase.SLOW_END)
+					if (m_TimePhase == TimePhase.QUICK_END)
 					{
-
+                        Time.timeScale = 1.0f;
 						BattleBoardData.skillChoiceBoard.SetActive(false);
 
 						if (skillChoiceBoard.GetChoiceCount(m_Player.gameObject) > 0)
@@ -398,28 +401,42 @@ public class BattleManager : MonoBehaviour
 					if (resultPahse.IsFirst())
 					{
 						StopCoroutine(m_BattleSlow);
-                        m_BattleSlow = null;
-                        m_TimePhase = TimePhase.SLOW;
-					}
-                    
-                    // アニメーション切り替えポイント到達時
-                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
-                    {
-                        BattleBoardData.skillChoiceBoard.SetActive(true);
+                        m_BattleSlow = StartCoroutine(BattleSlow(0.1f, 0.1f, 0, 0, 0.1f, 0));
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
+                        m_IsChoice = false;
                     }
 
-                    // スキルUI消去
-                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
+                    GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+
+                    // アニメーション切り変え中
+                    if (player.m_AnmMgr.GetState() == AnmState.CHANGE)
                     {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        break;
+                    }
+                    
+                    // 通常再生ポイント
+                    if (!m_SlowEnd && player.m_AnmMgr.GetAnmData()._slowEndFrame <= player.m_AnmMgr.GetFrame())
+                    {
+                        StopCoroutine(m_BattleSlow);
+                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_SlowEnd = true;
+                    }
+
+                    // スローポイント
+                    if (!m_SlowStart && (player.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || player.m_AnmMgr.GetAnmData()._slowStartFrame <= player.m_AnmMgr.GetFrame()))
+                    {
+                        BattleBoardData.skillChoiceBoard.SetActive(true);
+                        StopCoroutine(m_BattleSlow);
+                        StartCoroutine(BattleSlow(0.1f, 0.1f, 0, 0, 0.1f, 0));
+                        m_SlowStart = true;
                     }
 
                     // アニメーション終了
-                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoiceCount(m_Player.gameObject) > 0)
                     {
+                        // スキルUI消去
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+
                         // 敵カード選択
                         SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
                         int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
@@ -434,6 +451,9 @@ public class BattleManager : MonoBehaviour
 
                         resultPahse.Change(ResultPhase.SECOND);
 						resultPahse.Start();
+
+                        m_SlowEnd = false;
+                        m_SlowStart = false;
 						return;
 					}
 				}
@@ -442,30 +462,40 @@ public class BattleManager : MonoBehaviour
 				{
 					if (resultPahse.IsFirst())
 					{
-                        m_BattleSlow = null;
-                        m_TimePhase = TimePhase.SLOW;
-                        //BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-                        //BattleBoardData.skillChoiceBoard.SetActive(true);
-                        //m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
                     }
-                    // アニメーション切り替えポイント到達時
-                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+
+                    GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+
+                    // アニメーション切り変え中
+                    if (player.m_AnmMgr.GetState() == AnmState.CHANGE)
+                    {
+                        break;
+                    }
+
+                    // 通常再生ポイント
+                    if (!m_SlowEnd && player.m_AnmMgr.GetAnmData()._slowEndFrame <= player.m_AnmMgr.GetFrame())
+                    {
+                        StopCoroutine(m_BattleSlow);
+                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_SlowEnd = true;
+                    }
+
+                    // スローポイント
+                    if (!m_SlowStart && (player.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || player.m_AnmMgr.GetAnmData()._slowStartFrame <= player.m_AnmMgr.GetFrame()))
                     {
                         BattleBoardData.skillChoiceBoard.SetActive(true);
-                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
-                    }
-
-                    // スキルUI消去
-                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
-                    {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        StopCoroutine(m_BattleSlow);
+                        StartCoroutine(BattleSlow(0.1f, 0.1f, 0, 0, 0.1f, 0));
+                        m_SlowStart = true;
                     }
 
                     // アニメーション終了
-                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoiceCount(m_Player.gameObject) > 0)
                     {
+                        // スキルUI消去
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+
                         // 敵カード選択
                         SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
                         int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
@@ -479,7 +509,9 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
                         resultPahse.Change(ResultPhase.THIRD);
 						resultPahse.Start();
-						return;
+                        m_SlowEnd = false;
+                        m_SlowStart = false;
+                        return;
 					}
 				}
 				break;
@@ -487,30 +519,41 @@ public class BattleManager : MonoBehaviour
                 {
                     if (resultPahse.IsFirst())
                     {
-                        m_BattleSlow = null;
                         m_TimePhase = TimePhase.SLOW;
-                        //BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-                        //BattleBoardData.skillChoiceBoard.SetActive(true);
-                        //m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
+                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
                     }
-                    // アニメーション切り替えポイント到達時
-                    if (m_BattleSlow == null && m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+
+                    GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+
+                    // アニメーション切り変え中
+                    if (player.m_AnmMgr.GetState() == AnmState.CHANGE)
+                    {
+                        break;
+                    }
+
+                    // 通常再生ポイント
+                    if (!m_SlowEnd && player.m_AnmMgr.GetAnmData()._slowEndFrame <= player.m_AnmMgr.GetFrame())
+                    {
+                        StopCoroutine(m_BattleSlow);
+                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_SlowEnd = true;
+                    }
+
+                    // スローポイント
+                    if (!m_SlowStart && (player.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || player.m_AnmMgr.GetAnmData()._slowStartFrame <= player.m_AnmMgr.GetFrame()))
                     {
                         BattleBoardData.skillChoiceBoard.SetActive(true);
-                        BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().ChoiceReset();
-
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 0, 2, SLOW_END2, 0));
-                    }
-
-                    // スキルUI消去
-                    if (BattleBoardData.skillChoiceBoard.activeSelf == true && m_TimePhase == TimePhase.SLOW_END)
-                    {
-                        BattleBoardData.skillChoiceBoard.SetActive(false);
+                        StopCoroutine(m_BattleSlow);
+                        StartCoroutine(BattleSlow(0.1f, 0.1f, 0, 0, 0.1f, 0));
+                        m_SlowStart = true;
                     }
 
                     // アニメーション終了
-                    if (m_TimePhase == TimePhase.QUICK_END && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+                    if (BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().GetChoiceCount(m_Player.gameObject) > 0)
                     {
+                        // スキルUI消去
+                        BattleBoardData.skillChoiceBoard.SetActive(false);
+
                         // 敵カード選択
                         SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
                         int tCardNum = controller.GetCardList(SkillChoiceBoardController.USER.TARGET).Count;
@@ -524,22 +567,42 @@ public class BattleManager : MonoBehaviour
                         BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>().Battle(m_Player.gameObject, m_Target.gameObject);
                         resultPahse.Change(ResultPhase.FOURTH);
 						resultPahse.Start();
-						return;
-					}
+                        m_SlowEnd = false;
+                        m_SlowStart = false;
+                        return;
+                    }
 				}
 				break;
 			case ResultPhase.FOURTH:
 				{
 					if (resultPahse.IsFirst())
 					{
-						//m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, 2, 0, SLOW_END2, 1));
-					}
-					if ( m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop() && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsAnmEndORLoop())
+
+                    }
+                    GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+
+                    // アニメーション切り変え中
+                    if (player.m_AnmMgr.GetState() == AnmState.CHANGE)
+                    {
+                        break;
+                    }
+
+                    // 通常再生ポイント
+                    if (!m_SlowEnd && player.m_AnmMgr.GetAnmData()._slowEndFrame <= player.m_AnmMgr.GetFrame())
+                    {
+                        StopCoroutine(m_BattleSlow);
+                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_SlowEnd = true;
+                    }
+
+                    if ( m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsState(AnmState.END | AnmState.LOOP) && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsState(AnmState.END | AnmState.LOOP))
 					{
 						m_Player.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;
 						m_Target.transform.GetComponent<GrgrCharCtrl>().m_IsBattleAnmPlay = false;
 						Time.timeScale = 1.0f;
-						return;
+                        m_SlowEnd = false;
+                        m_SlowStart = false;
+                        return;
 					}
 				}
 				break;
@@ -600,7 +663,6 @@ public class BattleManager : MonoBehaviour
 			yield return null;
 		}
 
-		Time.timeScale = 1;
 		m_TimePhase = TimePhase.QUICK_END;
 		yield return null;
 	}
