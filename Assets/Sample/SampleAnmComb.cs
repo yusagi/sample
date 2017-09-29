@@ -5,6 +5,11 @@ using UnityEngine;
 public class SampleAnmComb : MonoBehaviour {
 
     public float m_Slow = 0.3f;
+    public SAMPLE_NAME m_Name1;
+    public SAMPLE_NAME m_Name2;
+    public SAMPLE_NAME m_Name3;
+    public SAMPLE_NAME m_Name4;
+    
 
 	private AnimationManager m_AnmMgr;
     enum BATTLE_FHASE
@@ -16,6 +21,12 @@ public class SampleAnmComb : MonoBehaviour {
         NONE,
     }
     Phase<BATTLE_FHASE> fhase = new Phase<BATTLE_FHASE>();
+
+    public enum SAMPLE_NAME{
+        Jab,
+        Hikick,
+        Spinkick
+    }
 
 	// Use this for initialization
 	void Start () {
@@ -39,7 +50,7 @@ public class SampleAnmComb : MonoBehaviour {
                 {
                     if (fhase.IsFirst())
                     {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Jab", "AttackCommon");
+                        m_AnmMgr.ChangeAnimationInFixedTime(m_Name1.ToString(), "AttackCommon");
                         Time.timeScale = m_Slow;
                     }
 
@@ -73,7 +84,7 @@ public class SampleAnmComb : MonoBehaviour {
                 {
                     if (fhase.IsFirst())
                     {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Hikick", "AttackCommon");
+                        m_AnmMgr.ChangeAnimationInFixedTime(m_Name2.ToString(), "AttackCommon");
                     }
 
                     if (m_AnmMgr.GetState() == AnmState.CHANGE){
@@ -103,7 +114,7 @@ public class SampleAnmComb : MonoBehaviour {
                 {
                     if (fhase.IsFirst())
                     {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Spinkick", "AttackCommon");
+                        m_AnmMgr.ChangeAnimationInFixedTime(m_Name3.ToString(), "AttackCommon");
                     }
 
                     if (m_AnmMgr.GetState() == AnmState.CHANGE){
@@ -133,7 +144,7 @@ public class SampleAnmComb : MonoBehaviour {
                 {
                     if (fhase.IsFirst())
                     {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Hikick");
+                        m_AnmMgr.ChangeAnimationInFixedTime(m_Name4.ToString());
                     }
 
                     if (m_AnmMgr.GetState() == AnmState.CHANGE){

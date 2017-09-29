@@ -335,7 +335,8 @@ public class SkillChoiceBoardController : MonoBehaviour {
                     case ActionType.GUARD_BREAK_ATTACK:
                     {
                         m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
-                        m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD_BREAK_ATTACK_REPELLED);
+                        //m_Results[target][phase] = new ResultData(tData, AnimationType.GUARD_BREAK_ATTACK_REPELLED);
+                        m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
                     }
                     break;
 				}
@@ -415,7 +416,8 @@ public class SkillChoiceBoardController : MonoBehaviour {
                         // エネミー通常攻撃
                         case ActionType.NORMAL_ATTACK:
                             {
-                                m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD_BREAK_ATTACK_REPELLED);
+                                //m_Results[player][phase] = new ResultData(pData, AnimationType.GUARD_BREAK_ATTACK_REPELLED);
+                                m_Results[player][phase] = new ResultData(pData, AnimationType.ATTACK);
                                 m_Results[target][phase] = new ResultData(tData, AnimationType.ATTACK);
                             }
                             break;

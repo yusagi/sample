@@ -11,6 +11,7 @@ public enum AnimationType
     COUNTER_MATCH,                  // カウンタースカし 
     GUARD,                          // ガード
     GUARD_BREAK,                    // ガード崩壊
+    DAMAGE,                         // ダメージ
     NONE,                           // なし
 }
 

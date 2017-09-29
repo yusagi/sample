@@ -720,6 +720,20 @@ public class GrgrCharCtrl : MonoBehaviour
                     }
                 }
                 break;
+            // ダメージ
+            case AnimationType.DAMAGE:
+                    {
+                        // 4フェーズ目だけフルでアニメーション
+                        if (resultPhase == BattleManager.ResultPhase.FOURTH)
+                        {
+                            m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
+                        }
+                        else
+                        {
+                            m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00", "AttackCommon");
+                        }
+                    }
+                    break;
             // アニメーションなし
             case AnimationType.NONE:
                 {
