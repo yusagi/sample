@@ -8,8 +8,10 @@ public class GameData : MonoBehaviour{
 	public UnityEngine.UI.Text killPillerText;
 
 	private static Transform camera;
+	private static BattleManager battleManager;
 	private static Transform battleBoard;
 	private static Transform pillerGenerator;
+	private static Transform canvas;
 
 	void Awake(){
 		killPillers = 0;
@@ -21,6 +23,14 @@ public class GameData : MonoBehaviour{
 		}
 
 		return camera;
+	}
+
+	public static BattleManager GetBattleManager(){
+		if (battleManager == null){
+			battleManager = GameObject.Find("BattleManager").GetComponent<BattleManager>();
+		}
+
+		return battleManager;
 	}
 
 	public static Transform GetBattleBoard(){
@@ -37,5 +47,12 @@ public class GameData : MonoBehaviour{
 		}
 
 		return pillerGenerator;
+	}
+
+	public static Transform GetCanvas(){
+		if (canvas == null){
+			canvas = GameObject.Find("Canvas").transform;
+		}
+		return canvas;
 	}
 }

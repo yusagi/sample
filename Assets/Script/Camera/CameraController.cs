@@ -142,23 +142,18 @@ public class CameraController : MonoBehaviour {
 					osPos = UtilityMath.VLerp(osPos.Current, m_BattleOffsetPos);
 				}
 				// バトルモード状態
-				switch(BattleManager._instance.battle.current){
+				switch(GameData.GetBattleManager().m_Battle.current){
 					// バトル終了
 					case BattleManager.Battle.BATTLE_END:{
-						if(BattleManager._instance.battle.IsFirst()){
+						if(GameData.GetBattleManager().m_Battle.IsFirst()){
 							phase.Change(CameraPhase.NORMAL);
 						}
 					}
 					break;
 					default:{
-						bool tmpVRotate = vRotate.MoveNext();
-						bool tmposPos = osPos.MoveNext();
-
-						if (!BattleManager._instance.DBG_IS_CAMERA_STOP || (tmpVRotate && tmposPos)){
 							offsetVAngle = vRotate.MoveNext() ? vRotate.Current : m_BattleOffsetVAngle;
 							offsetPos = osPos.MoveNext() ? osPos.Current : m_BattleOffsetPos;
 							SetPose();
-						}
 					}	
 					break;
 				}
@@ -264,7 +259,7 @@ public class CameraController : MonoBehaviour {
 		// vAngle = offsetVAngle;
 
 		// 回転
-		transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, vAngle);
+		transform.rotation = RotateXYAxis(GetBaseRotate(baseRotate, m_Player.up), offsetHAngle, vAngle);
 		// 座標設定
 		transform.position = OffsetPos(transform.rotation, m_Player.position, position);
 

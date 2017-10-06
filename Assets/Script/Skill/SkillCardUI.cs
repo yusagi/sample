@@ -5,12 +5,11 @@ using UnityEngine.UI;
 
 public class SkillCardUI : MonoBehaviour {
 
-	private Image m_Image;
+	public Image m_Image;
 	private bool m_IsChoice = false;
 	private SkillData m_Data{get;set;}
 
 	void Awake(){
-		m_Image = GetComponent<Image>();
 	}
 
 	// Use this for initialization
@@ -38,30 +37,7 @@ public class SkillCardUI : MonoBehaviour {
 
     // カード選択
 	public void Choice(){
-		m_IsChoice = !m_IsChoice;
-
-		SkillChoiceBoardController controller = BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>();
-
-		if (m_IsChoice){
-			int tmp = controller.m_PlayerAP - m_Data._ap;
-			if (tmp < 0){
-				m_IsChoice = false;
-				return;
-			}
-			controller.m_PlayerAP = tmp;
-
-			m_Image.color = new Color(m_Image.color.r, m_Image.color.g, m_Image.color.b, 0.5f);
-			controller.AddChoice(m_Data, GameManager.m_Player);
-
-            // カードオブジェクト消去
-            controller.CutCardObject(gameObject, SkillChoiceBoardController.USER.PLAYER);
-		}
-		else{
-			controller.m_PlayerAP += m_Data._ap;
-
-			m_Image.color = new Color(m_Image.color.r, m_Image.color.g, m_Image.color.b, 1.0f);
-			controller.CutChoice(m_Data, GameManager.m_Player);
-		}
+		BattleBoardData.skillChoiceBoard.Choice(SkillChoiceBoardController.USER.PLAYER, m_Data, transform, GameManager.m_Player);
 	}
 
     // アクションタイプ別カラー取得

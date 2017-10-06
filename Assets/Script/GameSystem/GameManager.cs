@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour {
         m_Player.name = "Player";
         m_Player.layer = (int)Layer.PLAYER;
         m_Player.transform.SetParent(transform, true);
+        m_Player.AddComponent<BattleAreaLineRenderer>().arc = GameData.GetBattleManager().BATTLE_START_DISTANCE;
         foreach(var data in SkillDataBase.PLAYER_DATAS)
         {
             m_Player.GetComponent<GrgrCharCtrl>().skillManager.AddSkill(data.Value);
@@ -39,16 +40,16 @@ public class GameManager : MonoBehaviour {
         }
 
         // ピラー
-        transform.FindChild("PillerContents").gameObject.SetActive(true);
-
-        // カメラ
-        GameData.GetCamera().GetComponent<CameraController>().enabled = true;
+        GameData.GetPillerGenerator().GetComponent<PillerGenerator>().enabled = true;
 
         // バトルマネージャー
         if (m_Enemy != null)
         {
-            transform.FindChild("BattleManager").gameObject.SetActive(true);
+            GameData.GetBattleManager().enabled = true;
         }
+        // カメラ
+        GameData.GetCamera().GetComponent<CameraController>().enabled = true;
+        
     }
 
     // Use this for initialization
@@ -116,14 +117,9 @@ public class GameManager : MonoBehaviour {
     private int FRICK_COUNT = 10;
     private int m_FrickCount = 0;
     private float m_FrickTimer = 0.0f;
-    private Vector3 m_CurrentVelocity;
-    public bool isMove = false;
 
     void EnemyUpdate()
     {
-        if (isMove == false){
-            //return;
-        }
         GrgrCharCtrl enemyController = m_Enemy.GetComponent<GrgrCharCtrl>();
         enemyController.m_TouchType = TouchType.None;
 
@@ -138,7 +134,7 @@ public class GameManager : MonoBehaviour {
             {
                 m_FrickCount = FRICK_COUNT;
                 if (enemyController.state.current == GrgrCharCtrl.State.FLICK_MOVE){
-                enemyController.transform.rotation = Quaternion.AngleAxis(Random.Range(0.0f, 359.0f), enemyController.transform.up) * enemyController.transform.rotation;
+                //enemyController.transform.rotation = Quaternion.AngleAxis(Random.Range(0.0f, 359.0f), enemyController.transform.up) * enemyController.transform.rotation;
                 }
             }
 

@@ -65,6 +65,34 @@ public class AnimationManager : MonoBehaviour {
         ChangeAnimationInFixedTime(name, data._layer, data._durationTime, endFrame, data._offsetTime, data._slowEndFrame, data._slowStartFrame);
     }
     
+    // アニメーション変更(使わないとこには-1を入れる)
+    public void ChangeAnmDataInFixedTime(string name, float durationTime = -1, int endFrame = -1, float offsetTime = -1, float slowEndFrame = -1, float slowStartFrame = -1)
+    {
+        AnimationReset();
+        // 再生するアニメーションデータを取得
+        AnmData data = GetTransData(name, m_CurrentName);
+        if (durationTime != -1){
+            data._durationTime = durationTime;
+        }
+        if (endFrame != -1){
+            data._endFrame = endFrame;
+        }
+        else{
+            data._endFrame = TimeToFrame(GetEndTime(data._name));
+        }
+        if (offsetTime != -1){
+            data._offsetTime = offsetTime;
+        }
+        if (slowEndFrame != -1){
+            data._slowEndFrame = slowEndFrame;
+        }
+        if (slowStartFrame != -1){
+            data._slowStartFrame = slowStartFrame;
+        }
+
+        ChangeAnimationInFixedTime(name, data._layer, data._durationTime, data._endFrame, data._offsetTime, data._slowEndFrame, data._slowStartFrame);
+    }
+    
     // 再生中のアニメーションのあとに続けてアニメーションを再生する(ループでないアニメーションに限る)
     public void ChainAnimation(string name, string nextName = null)
     {
@@ -177,14 +205,14 @@ public class AnimationManager : MonoBehaviour {
     }
 
     // フレームから時間取得
-    public float FrameToTime(float frameCount)
+    public static float FrameToTime(float frameCount)
     {
         float time = frameCount / FRAME_RATE;
         return time;
     }
 
     // 時間からフレーム取得
-    public int TimeToFrame(float time)
+    public static int TimeToFrame(float time)
     {
         int frameCount = (int)(time * FRAME_RATE);
         return frameCount;
@@ -196,14 +224,16 @@ public class AnimationManager : MonoBehaviour {
 	}
 
     // アニメーションデータ取得
-    public AnmData GetAnmData(int num = 0){
-        int anmNum = m_AnmList.Count;
-        if (anmNum > num){
-            return m_AnmList[num];
+    public AnmData GetAnmData(string name1 = null, string name2 = null){
+        if (string.IsNullOrEmpty(name1)){
+            name1 = m_CurrentName;
         }
-        else{
-            return null;
-        }
+        return GetTransData(name1, name2);
+    }
+
+    // 再生中のアニメーションデータを取得
+    public AnmData GetPlayAnmData(){
+        return m_AnmList[0];
     }
 
 	// アニメーター取得

@@ -76,14 +76,12 @@ public class GrgrCharCtrl : MonoBehaviour
     // 状態
     public Phase<State> state = new Phase<State>();
     private Gear gear;  // ギア
-    // フラグ
-    public bool m_IsBattleAnmStart { get; set; }      // ジャンプバトル開始
-    public bool m_IsBattleAnmPlay { get; set; }           // ジャンプバトル中
+    
     // ASCENSION用
     private float ascensionTimer = 0;
     // コルーチン
     IEnumerator<Quaternion> qLerp;
-    public IEnumerator battle { get; set; }
+    public IEnumerator m_Battle { get; set; }
 
     // バトルシステム
     System.Action m_BattleSystem;
@@ -123,10 +121,6 @@ public class GrgrCharCtrl : MonoBehaviour
         // キャラクター状態初期化
         state.Change(State.STOP);
 
-        // バトルアニメーションフラグ初期化
-        m_IsBattleAnmStart = false;
-        m_IsBattleAnmPlay = false;
-
         // 座標初期化
         transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
 
@@ -154,7 +148,7 @@ public class GrgrCharCtrl : MonoBehaviour
     {
         dbg_State = state.current;
         dbg_AnmState = m_AnmMgr.GetState();
-        dbg_BattleState = BattleManager._instance.resultPahse.current;
+        dbg_BattleState = GameData.GetBattleManager().m_ResultPhase.current;
 
         // 最大速度を変更
         rigidbody.maxVelocitySpeed = maxSpeed;
@@ -262,18 +256,36 @@ public class GrgrCharCtrl : MonoBehaviour
     }
     #endregion
 
+    #region 回転
+    // UPのベクトルを元に向きを回転
+    public void GrgrRotateUP(Vector3 up){
+        Vector3 front = Vector3.ProjectOnPlane(transform.forward, up);
+        transform.rotation = Quaternion.LookRotation(front, up);
+    }
+    #endregion
+
     #region 移動
 
     // 球体ぐるぐる移動
-    void GrgrMove(Vector3 velocity, float jamp)
+    public void GrgrMove(Vector3 velocity, float jamp, bool constVel = false)
     {
         // 移動量を円弧とし、角度を求めて移動する
         if (velocity.magnitude > Vector3.kEpsilon)
         {
             float arc = velocity.magnitude;
             float angle = arc / (2.0f * Mathf.PI * m_Planet.transform.transform.localScale.y * 0.5f) * 360.0f;
-            transform.rotation = Quaternion.LookRotation(velocity.normalized, transform.up);
-            transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+            // 向きを変えずに移動する
+            if (constVel){
+                Vector3 tmpFront = transform.forward;
+                transform.rotation = Quaternion.LookRotation(velocity.normalized, transform.up);
+                transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+                Vector3 front = Vector3.ProjectOnPlane(tmpFront, transform.up);
+                transform.rotation = Quaternion.LookRotation(front, transform.up);
+            }
+            else{
+                transform.rotation = Quaternion.LookRotation(velocity.normalized, transform.up);
+                transform.rotation = Quaternion.AngleAxis(angle, transform.right) * transform.rotation;
+            }
         }
         transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.transform.position, m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND + jamp);
     }
@@ -503,32 +515,39 @@ public class GrgrCharCtrl : MonoBehaviour
             m_CurrentVelocity = Vector3.zero;
         }
 
-        switch (BattleManager._instance.battle.current)
+        switch (GameData.GetBattleManager().m_Battle.current)
         {
             // エンカウント
-            case BattleManager.Battle.SKILL_BATTLE_START:
-                {
-                    if (BattleManager._instance.battle.IsFirst())
-                    {
-                        return;
-                    }
-
-                    FrickAddForce(Vector3.zero);
-                    GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
+            case BattleManager.Battle.BATTLE_ENCOUNT:{
+                if (GameData.GetBattleManager().m_Battle.IsFirst()){
+                        StartCoroutine(m_Battle);
                 }
-                break;
-            // スキルバトルプレイ
-            case BattleManager.Battle.SKILL_BATTLE_PLAY:
-                {
-                    if (BattleManager._instance.battle.IsFirst())
-                    {
+            }
+            break;
+            // // バトルスタート
+            // case BattleManager.Battle.SKILL_BATTLE_START:
+            //     {
+            //         if (GameData.GetBattleManager().m_Battle.IsFirst())
+            //         {
+            //             return;
+            //         }
 
-                        StartCoroutine(battle);
+            //         FrickAddForce(Vector3.zero);
+            //         GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
+            //     }
+            //     break;
+            // // スキルバトルプレイ
+            // case BattleManager.Battle.SKILL_BATTLE_PLAY:
+            //     {
+            //         if (GameData.GetBattleManager().m_Battle.IsFirst())
+            //         {
 
-                        return;
-                    }
-                }
-                break;
+            //             StartCoroutine(m_Battle);
+
+            //             return;
+            //         }
+            //     }
+            //     break;
             // バトル終了
             case BattleManager.Battle.BATTLE_END:
                 {
@@ -562,38 +581,38 @@ public class GrgrCharCtrl : MonoBehaviour
     // バトル結果更新 
     void BattleResultUpdate(GameObject target)
     {
-        BattleManager.ResultPhase phase = BattleManager._instance.resultPahse.current;
+        BattleManager.ResultPhase phase = GameData.GetBattleManager().m_ResultPhase.current;
         switch (phase)
         {
             case BattleManager.ResultPhase.FIRST:
                 {
-                    if (BattleManager._instance.resultPahse.IsFirst())
+                    if (GameData.GetBattleManager().m_ResultPhase.IsFirst())
                     {
-                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard, phase);
                     }
                 }
                 break;
             case BattleManager.ResultPhase.SECOND:
                 {
-                    if (BattleManager._instance.resultPahse.IsFirst())
+                    if (GameData.GetBattleManager().m_ResultPhase.IsFirst())
                     {
-                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard, phase);
                     }
                 }
                 break;
             case BattleManager.ResultPhase.THIRD:
                 {
-                    if (BattleManager._instance.resultPahse.IsFirst())
+                    if (GameData.GetBattleManager().m_ResultPhase.IsFirst())
                     {
-                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard, phase);
                     }
                 }
                 break;
             case BattleManager.ResultPhase.FOURTH:
                 {
-                    if (BattleManager._instance.resultPahse.IsFirst())
+                    if (GameData.GetBattleManager().m_ResultPhase.IsFirst())
                     {
-                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard.GetComponent<SkillChoiceBoardController>(), phase);
+                        BattleResultSetAnm(target, BattleBoardData.skillChoiceBoard, phase);
                     }
                 }
                 break;
@@ -601,151 +620,41 @@ public class GrgrCharCtrl : MonoBehaviour
     }
 
     // バトルリザルトセットアニメーション
-    void BattleResultSetAnm(GameObject target, SkillChoiceBoardController controller, BattleManager.ResultPhase resultPhase)
+    void BattleResultSetAnm(GameObject target, SkillChoiceBoardController controller, BattleManager.ResultPhase m_ResultPhase)
     {
-
         int damage = 0;
-        AnimationType anmType = controller.GetAnimationType(gameObject, resultPhase);
+        AnimationType anmType = controller.GetResultData(gameObject, m_ResultPhase)._anmType;
         switch (anmType)
         {
             // 通常攻撃
             case AnimationType.ATTACK:
                 {
-                    SkillData data = controller.GetSkillData(gameObject, resultPhase);
+                    SkillData data = controller.GetResultData(gameObject, m_ResultPhase)._skill;
 
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
-                    }
+                    m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
 
                     damage = data._attack;
-                }
-                break;
-            // 攻撃はじかれ
-            case AnimationType.ATTACK_REPELLED:
-                {
-                    SkillData data = controller.GetSkillData(gameObject, resultPhase);
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "AttackCommon");
-                        //m_AnmMgr.ChainAnimation("DAMAGED00");
-                    }
-                }
-                break;
-            // カウンター攻撃
-            case AnimationType.COUNTER_ATTACK:
-                {
-                    SkillData myData = controller.GetSkillData(gameObject, resultPhase);
-                    SkillData tData = controller.GetSkillData(target, resultPhase);
-
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("SAMK");
-                    }
-                    else
-                    {
-                        //m_AnmMgr.ChangeAnimationInFixedTime("Land", "RISING_P");
-                        m_AnmMgr.ChangeAnimationInFixedTime("SAMK", "AttackCommon");
-                    }
-
-                    damage = tData._attack;
-                    hp += damage;
-                }
-                break;
-            // カウンタースカし
-            case AnimationType.COUNTER_MATCH:
-                {
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Land");
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Land", "AttackCommon");
-                    }
                 }
                 break;
             // 防御
             case AnimationType.GUARD:
                 {
-                    SkillData tData = controller.GetSkillData(target, resultPhase);
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Guard");
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Guard", "AttackCommon");
-                    }
-                }
-                break;
-            // 防御崩壊
-            case AnimationType.GUARD_BREAK:
-                {
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("GuardBreak");
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("GuardBreak", "AttackCommon");
-                    }
-                }
-                break;
-            // 防御崩壊攻撃はじかれ
-            case AnimationType.GUARD_BREAK_ATTACK_REPELLED:
-                {
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("SpinkickBreak");
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("SpinkickBreak", "AttackCommon");
-                    }
+                    // ガードの時は相手のタイミングを参照してアニメーションを再生する
+                    AnmData data = m_AnmMgr.GetAnmData(controller.GetResultData(target, m_ResultPhase)._skill._anmName, "Common");
+                    m_AnmMgr.ChangeAnmDataInFixedTime("Guard", -1, -1, -1, data._slowEndFrame, data._slowStartFrame);
                 }
                 break;
             // ダメージ
             case AnimationType.DAMAGE:
                     {
-                        // 4フェーズ目だけフルでアニメーション
-                        if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                        {
-                            m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
-                        }
-                        else
-                        {
-                            m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00", "AttackCommon");
-                        }
+                        // ダメージの時は相手のタイミングを参照してアニメーションを再生する
+                        StartCoroutine(damageAnm(target));
                     }
                     break;
             // アニメーションなし
             case AnimationType.NONE:
                 {
-                    // 4フェーズ目だけフルでアニメーション
-                    if (resultPhase == BattleManager.ResultPhase.FOURTH)
-                    {
                         m_AnmMgr.ChangeAnimationInFixedTime("Idle");
-                    }
-                    else
-                    {
-                        m_AnmMgr.ChangeAnimationInFixedTime("Idle", "AttackCommon");
-                    }
                 }
                 break;
         }
@@ -753,73 +662,20 @@ public class GrgrCharCtrl : MonoBehaviour
         target.GetComponent<GrgrCharCtrl>().hp -= damage;
     }
 
-    // シャンプバトル
-    //public IEnumerator JampBattle()
-    //{
-    //    // 時間
-    //    float time = 1.0f;
-
-    //    // 移動
-    //    float angle = Mathf.Acos(Vector3.Dot(transform.up, GameManager.m_Enemy.transform.up)) * Mathf.Rad2Deg;
-    //    float arc = (2 * Mathf.PI * m_Planet.transform.localScale.y * 0.5f) * (angle / 360.0f);
-    //    Vector3 targetVel = (GameManager.m_Enemy.transform.position + GameManager.m_Enemy.transform.right) - transform.position;
-    //    Quaternion baseRotate = transform.rotation;
-
-    //    // ジャンプ
-    //    float height = BattleManager._instance.DBG_ACTION_JAMP;
-    //    float distance = Mathf.Sqrt(height);
-
-    //    // 止めるtを計算
-    //    float stop_t = 0.0f;
-    //    if (arc > 3.0f)
-    //    {
-    //        float x = (arc * 0.5f) - 1.5f;
-    //        stop_t = x / arc;
-    //    }
-
-    //    float t = 0.0f;
-
-    //    while (t < 1f)
-    //    {
-    //        t += (Time.deltaTime / time);
-    //        t = Mathf.Min(t, 1.0f);
-
-    //        // 移動
-    //        transform.rotation = baseRotate;
-    //        float val = Mathf.Lerp(0.0f, arc, t);
-    //        Vector3 front = Vector3.ProjectOnPlane(targetVel, transform.up).normalized;
-
-    //        // ジャンプ
-    //        float x = Mathf.Lerp(0.0f, 2 * distance, t);
-    //        float jamp = -(Mathf.Pow(x - distance, 2)) + height;
-
-    //        GrgrMove(front * val, jamp);
-
-    //        // アクション
-    //        if (t > stop_t && !m_IsBattleAnmPlay)
-    //        {
-    //            if (!m_IsBattleAnmStart)
-    //            {
-    //                m_IsBattleAnmStart = true;
-
-    //            }
-    //            while (!m_IsBattleAnmPlay)
-    //            {
-    //                BattleResultUpdate();
-    //                yield return null;
-    //            }
-    //        }
-
-    //        yield return null;
-    //    }
-
-    //    m_IsBattleAnmStart = false;
-
-    //    rigidbody.velocity = transform.forward * rigidbody.GetSpeed();
-    //}
+    // ダメージモーション時
+    IEnumerator damageAnm(GameObject target){
+        yield return null;  
+        GrgrCharCtrl obj = target.GetComponent<GrgrCharCtrl>(); 
+        while(obj.m_AnmMgr.GetState() == AnmState.CHANGE){
+            yield return null;
+        }
+        while (obj.m_AnmMgr.GetPlayAnmData()._slowEndFrame >= obj.m_AnmMgr.GetFrame()){
+            yield return null;
+        }
+        m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
+    }
 
     // 正面衝突バトル
-
     public IEnumerator FrontBattle(Transform target)
     {
         yield return null;
@@ -829,29 +685,18 @@ public class GrgrCharCtrl : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(front, transform.up);
         rigidbody.velocity = front * rigidbody.GetSpeed();
 
-        while (!m_IsBattleAnmStart)
+        while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.BATTLE_ENCOUNT || GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_START)
         {
-            float distance = Vector3.Distance(rigidbody.prevPosition, target.GetComponent<GrgrCharCtrl>().rigidbody.prevPosition);
-            if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE)
-            {
-                m_IsBattleAnmStart = true;
-                m_IsBattleAnmPlay = true;
-            }
-            else
-            {
-                rigidbody.velocity = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized * rigidbody.GetSpeed();
-                GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
-                yield return null;
-            }
+            rigidbody.velocity = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized * rigidbody.GetSpeed();
+            GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
+            yield return null;
         }
 
-        while (m_IsBattleAnmPlay)
+        while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_PLAY)
         {
             BattleResultUpdate(target.gameObject);
             yield return null;
         }
-
-        m_IsBattleAnmStart = false;
     }
 
     // 背面バトル
@@ -864,27 +709,16 @@ public class GrgrCharCtrl : MonoBehaviour
         Vector3 front = Vector3.ProjectOnPlane(toTarget, transform.up).normalized;
         transform.rotation = Quaternion.LookRotation(front, transform.up);
 
-        while (!m_IsBattleAnmStart)
+        while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.BATTLE_ENCOUNT || GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_START)
         {
-            float distance = Vector3.Distance(rigidbody.prevPosition, target.GetComponent<GrgrCharCtrl>().rigidbody.prevPosition);
-            if (distance <= BattleManager._instance.DBG_PLAY_DISTANCE)
-            {
-                m_IsBattleAnmStart = true;
-                m_IsBattleAnmPlay = true;
-            }
-            else
-            {
-                yield return null;
-            }
+            yield return null;
         }
 
-        while (m_IsBattleAnmPlay)
+        while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_PLAY)
         {
             BattleResultUpdate(target.gameObject);
             yield return null;
         }
-
-        m_IsBattleAnmStart = false;
     }
 #endregion
 

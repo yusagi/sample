@@ -16,6 +16,25 @@ public class Rigidbody_grgr {
 		return position;
 	}
 
+	// 2点間の弧の長さを求める
+	public static float Arc(Vector3 a, Vector3 b, Vector3 center, float radius){
+		Vector3 toA = (a - center).normalized;
+		Vector3 toB = (b - center).normalized;
+
+		float angle = Mathf.Acos(Vector3.Dot(toA, toB)) * Mathf.Rad2Deg;
+
+		float arc = (2.0f * Mathf.PI * radius) * (angle / 360.0f);
+		
+		return arc;
+	}
+
+	// 弧の長さから角度を求める
+	public static float Angle(float arc, float radius){
+		float angle = (arc * 360.0f) / (2.0f * Mathf.PI * radius);
+
+		return angle;
+	}
+
 #region メンバ変数
 
 	public float maxVelocitySpeed {get;set;}

@@ -4,12 +4,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class BattleBoardData{
-	public static GameObject skillChoiceBoard;
+	public static SkillChoiceBoardController skillChoiceBoard;
 
 
 	public static void Initialize(){
 		if (skillChoiceBoard == null){
-			skillChoiceBoard = GameData.GetBattleBoard().FindChild("SkillChoiiceBoard").gameObject;
+			skillChoiceBoard = GameData.GetBattleBoard().FindChild("SkillChoiiceBoard").GetComponent<SkillChoiceBoardController>();
 		}
 	}
 }

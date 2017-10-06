@@ -5,12 +5,7 @@ using UnityEngine;
 public enum AnimationType
 {
     ATTACK = 0,                     // 攻撃
-    ATTACK_REPELLED,                // 攻撃はじかれ
-    GUARD_BREAK_ATTACK_REPELLED,    // ガード崩壊攻撃はじかれ
-    COUNTER_ATTACK,                 // カウンター攻撃
-    COUNTER_MATCH,                  // カウンタースカし 
     GUARD,                          // ガード
-    GUARD_BREAK,                    // ガード崩壊
     DAMAGE,                         // ダメージ
     NONE,                           // なし
 }
@@ -74,10 +69,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   0, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   0, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 0, 0)},
             }
         },
         // 走り(ループ)
@@ -103,10 +100,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   0, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   0, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 0, 0)},
             }
         },
         // ジャブ（攻撃）
@@ -132,10 +131,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.05f,   14, 0, 0, 25) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.05f,   14, 0, 0, 25) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 0, 25)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.05f, 28, 0, 0, 25)},
             }
         },
         // ハイキック（攻撃）
@@ -160,10 +161,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,   29, 0, 5, 17) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.1f,   29, 0, 5, 17) },
 
                 // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 10, 17)},
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 5, 17)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.1f, 29, 0, 5, 17)},
             }
         },
         // スピンキック（攻撃）
@@ -188,10 +191,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.05f,    31, 0, 7, 20) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.05f,    31, 0, 7, 20) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0, 7, 20)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.05f, 31, 0, 7, 20)},
             }
         },
         // しゃがみ（カウンター）
@@ -216,10 +221,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   51, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   51, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 51, 0)},
             }
         },
         // 昇竜拳（カウンター攻撃）
@@ -244,10 +251,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   64, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   64, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 64, 0)},
             }
         },
         // 斬り上げ(カウンター攻撃)
@@ -272,10 +281,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   94, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   94, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 94, 0)},
             }
         },
         // サマーソルト（カウンター攻撃）
@@ -301,10 +312,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   35, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   35, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 35, 0)},
             }
         },
         // ダメージ(吹っ飛び)
@@ -329,10 +342,12 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   44, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   44, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 44, 0)},
             }
         },
         // ダメージ(軽め)
@@ -357,38 +372,42 @@ public class AnimationDataBase
 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,   33, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.1f,   33, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.1f, 33, 0)},
             }
         },
         // 防御
         {"Guard", new Dictionary<string, AnmData>
             {
                 // 状態系アニメーション
-                { "Idle",       new AnmData("Idle",             0, 0.25f,   54, 0) },
-                { "Run",        new AnmData("Run",              0, 0.25f,   54, 0) },
-                { "Damage_Down", new AnmData("Damage_Down",     0, 0.25f,   54, 0) },
-                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.25f,   54, 0) },
+                { "Idle",       new AnmData("Idle",             0, 0.1f,   54, 0) },
+                { "Run",        new AnmData("Run",              0, 0.1f,   54, 0) },
+                { "Damage_Down", new AnmData("Damage_Down",     0, 0.1f,   54, 0) },
+                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.1f,   54, 0) },
 
                 // 攻撃系アニメーション
-                { "Jab",        new AnmData("Jab",              0, 0.25f,   54, 0) },
-                { "Hikick",     new AnmData("Hikick",           0, 0.25f,   54, 0) },
-                { "Spinkick",   new AnmData("Spinkick",         0, 0.25f,   54, 0) },
-                { "RISING_P",   new AnmData("RISING_P",         0, 0.25f,   54, 0) },
-                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.25f,   54, 0) },
+                { "Jab",        new AnmData("Jab",              0, 0.1f,   54, 0) },
+                { "Hikick",     new AnmData("Hikick",           0, 0.1f,   54, 0) },
+                { "Spinkick",   new AnmData("Spinkick",         0, 0.1f,   54, 0) },
+                { "RISING_P",   new AnmData("RISING_P",         0, 0.1f,   54, 0) },
+                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.1f,   54, 0) },
 
                 // 防御系アニメーション
-                { "Land",       new AnmData("Land",             0, 0.25f,   54, 0) },
-                { "Guard",      new AnmData("Guard",            0, 0.25f,   54, 0) },
+                { "Land",       new AnmData("Land",             0, 0.1f,   54, 0) },
+                { "Guard",      new AnmData("Guard",            0, 0.1f,   54, 0) },
 
                 // 崩壊系アニメーション
-                { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   54, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   54, 0) },
+                { "GuardBreak", new AnmData("GuardBreak",       0, 0.1f,   54, 0) },
 
                 // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+                { "AttackCommon", new AnmData("AttackCommon", 0, 0.1f, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.1f, 54, 0)},
             }
         },
         // 防御崩壊
@@ -413,39 +432,13 @@ public class AnimationDataBase
                 
                 // 崩壊系アニメーション
                 { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   39, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   39, 0) },
 
                 // バトルモード中共通終了時間
                 { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
+
+                // 共通
+                { "Common", new AnmData("Common", 0, 0.25f, 39, 0)},
             }
         },
-        // スピンキック崩壊
-        {"SpinkickBreak", new Dictionary<string, AnmData>
-            {
-                // 状態系アニメーション
-                { "Idle",       new AnmData("Idle",             0, 0.25f,   42, 0) },
-                { "Run",        new AnmData("Run",              0, 0.25f,   42, 0) },
-                { "Damage_Down", new AnmData("Damage_Down",     0, 0.25f,   42, 0) },
-                { "DAMAGED00",  new AnmData("DAMAGED00",        0, 0.25f,   42, 0) },
-
-                // 攻撃系アニメーション
-                { "Jab",        new AnmData("Jab",              0, 0.25f,   42, 0) },
-                { "Hikick",     new AnmData("Hikick",           0, 0.25f,   42, 0) },
-                { "Spinkick",   new AnmData("Spinkick",         0, 0.25f,   42, 0) },
-                { "RISING_P",   new AnmData("RISING_P",         0, 0.25f,   42, 0) },
-                { "Counter_Slash", new AnmData("Counter_Slash", 0, 0.25f,   42, 0) },
-
-                // 防御系アニメーション
-                { "Land",       new AnmData("Land",             0, 0.25f,   42, 0) },
-                { "Guard",      new AnmData("Guard",            0, 0.25f,   42, 0) },
-
-                // 崩壊系アニメーション
-                { "GuardBreak", new AnmData("GuardBreak",       0, 0.25f,   42, 0) },
-                { "SpinkickBreak", new AnmData("SpinkickBreak", 0, 0.25f,   42, 0) },
-
-                // バトルモード中共通終了時間
-                { "AttackCommon", new AnmData("AttackCommon", 0, 0, 14, 0)},
-            }
-        }
     };
 }

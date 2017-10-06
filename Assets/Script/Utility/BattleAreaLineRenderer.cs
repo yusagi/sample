@@ -4,14 +4,17 @@ using UnityEngine;
 
 public class BattleAreaLineRenderer : MonoBehaviour {
 
-	public int vertexNums = 360;
+	public int vertexNums = 361;
 	public float width = 1.0f;
+	public float arc{get;set;}
 
 	private int prevVertexNums;
 	private LineRenderer lineDraw;
 
 	void Awake(){
-		lineDraw = gameObject.AddComponent<LineRenderer>();
+		if ((lineDraw = gameObject.GetComponent<LineRenderer>()) == null){
+			lineDraw = gameObject.AddComponent<LineRenderer>();
+		}
 		lineDraw.material = new Material(Shader.Find("Particles/Additive"));
 		lineDraw.SetColors(Color.yellow, Color.yellow);
 	}
@@ -30,8 +33,8 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 	void DrawLine(){
 		lineDraw.numPositions = vertexNums;
 		List<Vector3> vertexs = new List<Vector3>();
-		Quaternion pRotate =GameManager.m_Player.transform.rotation;
-		float vAngle = 30.0f;
+		Quaternion pRotate = transform.rotation;
+		float vAngle = Rigidbody_grgr.Angle(arc, GameManager.m_Planet.transform.localScale.y * 0.5f);
 		for(int i = 0; i <= vertexNums; i++){
 			Vector3 p;
 			Quaternion rotate = Quaternion.AngleAxis(i, pRotate * Vector3.up) * pRotate;
@@ -40,7 +43,10 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 			p = GameManager.m_Planet.transform.position + (rotate * Vector3.up * (GameManager.m_Planet.transform.localScale.y * 0.5f + 0.1f));
 			vertexs.Add(p);
 		}
-		transform.rotation = Quaternion.identity;
 		lineDraw.SetPositions(vertexs.ToArray());
+	}
+
+	public void SetColor(Color color){
+		lineDraw.SetColors(color, color);
 	}
 }
