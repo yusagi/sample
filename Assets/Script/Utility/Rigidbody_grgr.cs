@@ -4,6 +4,14 @@ using UnityEngine;
 
 public class Rigidbody_grgr {
 
+	// 座標からプラネット垂直な回転を求める
+	public static Quaternion PositionToRotate(Vector3 center, Vector3 position, Vector3 front){
+		Vector3 up = (position - center);
+		Vector3 forward = Vector3.ProjectOnPlane(front, up);
+
+		return Quaternion.LookRotation(forward, up);
+	}
+
 	// 回転からプラネット上の座標を取得
 	public static Vector3 RotateToPosition(Vector3 chrUp, Vector3 planetPosition, float planetRad, float up = 0.0f)
 	{
@@ -17,22 +25,31 @@ public class Rigidbody_grgr {
 	}
 
 	// 2点間の弧の長さを求める
-	public static float Arc(Vector3 a, Vector3 b, Vector3 center, float radius){
+	public static float Arc(Vector3 center, float planetRad, Vector3 a, Vector3 b){
 		Vector3 toA = (a - center).normalized;
 		Vector3 toB = (b - center).normalized;
 
 		float angle = Mathf.Acos(Vector3.Dot(toA, toB)) * Mathf.Rad2Deg;
 
-		float arc = (2.0f * Mathf.PI * radius) * (angle / 360.0f);
+		float arc = (2.0f * Mathf.PI * planetRad) * (angle / 360.0f);
 		
 		return arc;
 	}
 
 	// 弧の長さから角度を求める
-	public static float Angle(float arc, float radius){
-		float angle = (arc * 360.0f) / (2.0f * Mathf.PI * radius);
+	public static float Angle(float arc, float planetRad){
+		float angle = (arc * 360.0f) / (2.0f * Mathf.PI * planetRad);
 
 		return angle;
+	}
+
+	// 球体の2点間を補間
+	public static Vector3 GrgrLerp(Vector3 center, float planetRad, Vector3 a, Vector3 b, float t){
+		Vector3 p = Vector3.Lerp(a, b, t);
+
+		Vector3 up = (p - center).normalized;
+
+		return RotateToPosition(up, center, planetRad);
 	}
 
 #region メンバ変数

@@ -30,6 +30,7 @@ public class BattleManager : MonoBehaviour
 		SLOW,
 		SLOW_END,
 		KEEP,
+		KEEP_END,
 		QUICK,
 		QUICK_END
 	}
@@ -49,7 +50,7 @@ public class BattleManager : MonoBehaviour
 	// 状態
 	public Phase<Battle> m_Battle = new Phase<Battle>();
 	public Phase<ResultPhase> m_ResultPhase = new Phase<ResultPhase>();
-    private TimePhase m_TimePhase;
+    private Phase<TimePhase> m_TimePhase = new Phase<TimePhase>();
 
 	// フラグ
 	private bool m_BattleStart { get; set; }
@@ -74,6 +75,7 @@ public class BattleManager : MonoBehaviour
 	
 	// 各種定数
 	public float BATTLE_PLAY_DISTANCE;		// バトルモードで接敵した時の止まる距離
+	public float BATTLE_PLAY_SPEED;			// バトルモードで接敵した時のキャラの速度
 	public float BATTLE_START_DISTANCE;		// バトルモード開始の索敵距離
 	public float SLOW = 0.1f; 						// 通常スローの値
 	public float MORE_SLOW = 0.01f;					// よりスローの値
@@ -101,6 +103,7 @@ public class BattleManager : MonoBehaviour
 		//_instance = this;
 		m_Battle.Change(Battle.NONE);
 		m_ResultPhase.Change(ResultPhase.END);
+		m_TimePhase.Change(TimePhase.QUICK_END);
 		m_BattleStart = false;
 		BattleBoardData.Initialize();
 
@@ -111,10 +114,6 @@ public class BattleManager : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		if (m_BattleInterval > 0)
-		{
-			m_BattleInterval -= Time.deltaTime;
-		}
 		hps.text = "Player " + m_Player.GetComponent<GrgrCharCtrl>().hp + "   " + "Enemy " + m_Target.transform.GetComponent<GrgrCharCtrl>().hp;
 	}
 
@@ -126,11 +125,11 @@ public class BattleManager : MonoBehaviour
 	}
 
 	// 2キャラの距離を測る
-	public DistanceType GetObjectsDistance(){
+	DistanceType GetObjectsDistance(){
 		// 距離を求める
 		Vector3 center = GameManager.m_Planet.transform.position;
 		float radius = GameManager.m_Planet.transform.localScale.y * 0.5f;
-		float distance = Rigidbody_grgr.Arc(m_Player.position, m_Target.position, center, radius);
+		float distance = Rigidbody_grgr.Arc(center, radius, m_Player.position, m_Target.position);
 
 		// 距離タイプ
 		DistanceType tmpDistanceType;
@@ -150,7 +149,7 @@ public class BattleManager : MonoBehaviour
 		GameObject encount = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/UI_Encount"));
 		encount.transform.SetParent(GameData.GetCanvas(), false);
 
-		while(m_Battle.current == Battle.BATTLE_ENCOUNT){
+		while(m_Battle.current == Battle.BATTLE_ENCOUNT || m_Battle.current == Battle.SKILL_BATTLE_START){
 			yield return null;
 		}
 
@@ -158,13 +157,22 @@ public class BattleManager : MonoBehaviour
 	}
 
 	// 接敵スローポイントの生成コルーチン
-	IEnumerator SlowAreaCreate(Quaternion rot){
-		// スロー領域の表示
+	IEnumerator SlowAreaCreate(){
 		GameObject area = new GameObject("SLOW_AREA");
-		area.transform.rotation = rot;
 		BattleAreaLineRenderer areaLine = area.AddComponent<BattleAreaLineRenderer>();
-		areaLine.arc = BATTLE_PLAY_DISTANCE;
+		areaLine.arc = BATTLE_PLAY_DISTANCE * 0.5f;
 		areaLine.SetColor(Color.red);
+
+		while(m_Battle.current != Battle.SKILL_BATTLE_START){
+			Vector3 line = m_Player.position - m_Target.position;
+			Vector3 center = m_Target.position + (line*0.5f);
+			Vector3 up = (center - GameManager.m_Planet.transform.position).normalized;
+			Vector3 front = Vector3.ProjectOnPlane(Vector3.forward, up);
+
+			area.transform.rotation = Quaternion.LookRotation(front, up);
+			yield return null;
+		}
+
 		while(m_Battle.current != Battle.BATTLE_END){
 					yield return null;
 		}
@@ -187,7 +195,6 @@ public class BattleManager : MonoBehaviour
 			case Battle.BATTLE_ENCOUNT:
 				{
 					// エンカウント演出
-
 					if (m_Battle.IsFirst())
 					{
 						// エンカウントUI表示
@@ -197,17 +204,32 @@ public class BattleManager : MonoBehaviour
 						// 相手のAPを設定
 						BattleBoardData.skillChoiceBoard.m_TargetAP = (int)(m_Target.GetComponent<GrgrCharCtrl>().rigidbody.GetSpeed() * 3.6f);
 
+						//UnityEditor.EditorApplication.isPaused = true;
 					}
 		
 					// SKILL_BATTLE_STARTへ移行(相手との距離が一定値より近くなったら)
+					//if (GetObjectsDistance() == DistanceType.NEAR)
 					if (GetObjectsDistance() == DistanceType.NEAR)
 					{
-						// プレイヤー位置を調整
-						Vector3 toPlayer = (m_Player.position - m_Target.position).normalized;
-						m_Player.position = m_Target.position;
-						m_Player.GetComponent<GrgrCharCtrl>().GrgrMove(toPlayer * (BATTLE_PLAY_DISTANCE * 0.5f), 0, true);
-						// スキルUIボードのアクティブTRUE
-						BattleBoardData.skillChoiceBoard.gameObject.SetActive(true);
+						Vector3 line = m_Player.position - m_Target.position;
+						Vector3 center = m_Target.position + (line * 0.5f);
+						Vector3 up = (center - GameManager.m_Planet.transform.position).normalized;
+
+						Vector3 planetCenter = GameManager.m_Planet.transform.position;
+						float planetRad = GameManager.m_Planet.transform.localScale.y * 0.5f;
+						
+						m_Player.position = m_Target.position = Rigidbody_grgr.RotateToPosition(up, planetCenter, planetRad, 0);
+
+						m_Player.rotation = Rigidbody_grgr.PositionToRotate(planetCenter, m_Player.position, m_Player.forward);
+						m_Target.rotation = Rigidbody_grgr.PositionToRotate(planetCenter, m_Target.position, m_Target.forward);
+						GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+						GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
+
+						player.GrgrMove(-m_Player.forward * BATTLE_PLAY_DISTANCE * 0.5f, 0, true);
+						target.GrgrMove(-m_Target.forward * BATTLE_PLAY_DISTANCE * 0.5f, 0, true);
+
+						player.rigidbody.velocity = player.rigidbody.velocity.normalized * BATTLE_PLAY_SPEED;
+						target.rigidbody.velocity = target.rigidbody.velocity.normalized * BATTLE_PLAY_SPEED;
 
 						m_Battle.Change(Battle.SKILL_BATTLE_START);
 						m_Battle.Start();
@@ -225,30 +247,6 @@ public class BattleManager : MonoBehaviour
 						// スキルバトル初期化
 						skillChoiceBoard.BattleIni(m_Player.gameObject, m_Target.gameObject);
 
-						// プレイヤーカード生成
-						GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
-						int pCardNum = player.skillManager.GetSkillCards().Count;
-						for (int i = 0; i < MAX_CHOICES; i++)
-						{
-							var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
-							GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
-							instance.name = card._name;
-							instance.GetComponent<SkillCardUI>().AddCardData(card);
-							skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.PLAYER);
-						}
-
-                        // 敵カード生成
-                        GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
-                        int tCardNum = target.skillManager.GetSkillCards().Count;
-                        for (int i = 0; i < MAX_CHOICES; i++)
-                        {
-                            var card = target.skillManager.GetSkillCards()[Random.Range(0, tCardNum)];
-                            GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
-                            instance.name = card._name;
-                            instance.GetComponent<SkillCardUI>().AddCardData(card);
-                            skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.TARGET);
-                        }
-
 						// スロー処理(初回なのでキープタイムがカード選択時間)
 						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, SLOW_TIME1, SLOW_KEEP_TIME, SLOW_END1, 0));
 #if UNITY_EDITOR
@@ -258,14 +256,47 @@ public class BattleManager : MonoBehaviour
 					}
 
 					// カード選択したか
-					if (slowEnd == false && keepEnd == false && quickEnd){
+					if (slowEnd == false && keepEnd == false && quickEnd == false){
 						if (skillChoiceBoard.GetChoiceCount(m_Player.gameObject) == MAX_SELECTS){
 							slowEnd = keepEnd = quickEnd = true;
 						}
 					}
 
+					// UI出現タイミング
+					if (m_TimePhase.IsFirst()){
+						if (m_TimePhase.current == TimePhase.SLOW_END){
+							// スキルUIボードのアクティブTRUE
+							BattleBoardData.skillChoiceBoard.gameObject.SetActive(true);
+						}
+						if (m_TimePhase.current == TimePhase.KEEP){
+							// プレイヤーカード生成
+							GrgrCharCtrl player = m_Player.GetComponent<GrgrCharCtrl>();
+							int pCardNum = player.skillManager.GetSkillCards().Count;
+							for (int i = 0; i < MAX_CHOICES; i++)
+							{
+								var card = player.skillManager.GetSkillCards()[Random.Range(0, pCardNum)];
+								GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+								instance.name = card._name;
+								instance.GetComponent<SkillCardUI>().AddCardData(card);
+								skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.PLAYER);
+							}
+
+							// 敵カード生成
+							GrgrCharCtrl target = m_Target.GetComponent<GrgrCharCtrl>();
+							int tCardNum = target.skillManager.GetSkillCards().Count;
+							for (int i = 0; i < MAX_CHOICES; i++)
+							{
+								var card = target.skillManager.GetSkillCards()[Random.Range(0, tCardNum)];
+								GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/SkillCard"));
+								instance.name = card._name;
+								instance.GetComponent<SkillCardUI>().AddCardData(card);
+								skillChoiceBoard.AddCardObject(instance, SkillChoiceBoardController.USER.TARGET);
+							}
+						}
+					}
+
 					// スキル選択へ
-					if (m_TimePhase == TimePhase.QUICK_END)
+					if (m_TimePhase.current == TimePhase.QUICK_END)
 					{
 						// 索敵範囲に表示を戻す
 						BattleAreaLineRenderer areaLine = m_Player.GetComponent<BattleAreaLineRenderer>();
@@ -345,13 +376,15 @@ public class BattleManager : MonoBehaviour
 		}
 
 		// どのカメラタイプでエリア指定するか
-		float arc = Rigidbody_grgr.Arc(m_Player.position, m_Target.position, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f);
+		float arc = Rigidbody_grgr.Arc(GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, m_Player.position, m_Target.position);
 		bool tmpIsBattle = (arc < BATTLE_START_DISTANCE);//GameData.GetCamera().GetComponent<CameraController>().IsInCameraFramework();
 
-
 		// バトルモード条件
-		if (tmpIsBattle && m_BattleInterval < 0)
+		if (tmpIsBattle)
 		{
+			if (m_BattleInterval > 0){
+				return;
+			}
 			// バトルモード中ならリターン
 			if (m_Battle.current != Battle.NONE)
 			{
@@ -363,6 +396,31 @@ public class BattleManager : MonoBehaviour
 				return;
 				
 			// バトル状態設定
+			SetBattle();
+
+			// バトルプレイエリア生成
+			//StartCoroutine(SlowAreaCreate());
+			
+
+			// プレイヤー、エネミー、カメラがバトルに突入
+			m_Player.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
+			m_Target.transform.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
+			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
+			// バトルエンカウント
+			m_Battle.Change(Battle.BATTLE_ENCOUNT);
+			m_Battle.Start();
+			// バトルスタート
+			m_BattleStart = true;
+
+			//UnityEditor.EditorApplication.isPaused = true;
+		}
+		else{
+			m_BattleInterval -= Time.deltaTime;
+		}
+	}
+
+	// バトル状態設定
+	void SetBattle(){
 			// ターゲット方向に線を引く
 			Vector3 line = m_Target.position - m_Player.position;
 			// 相手が向いてる方向をプレイヤー基準で計算
@@ -396,28 +454,12 @@ public class BattleManager : MonoBehaviour
 			}
 
 			// デバグ用
-			player.m_Battle = player.FrontBattle(target.transform);
-			target.m_Battle = target.BackBattle(player.transform);
-
-			// スロー開始エリア生成
-			StartCoroutine(SlowAreaCreate(m_Target.transform.rotation));
-
-			// バトルエンカウント
-			m_Battle.Change(Battle.BATTLE_ENCOUNT);
-			m_Battle.Start();
-
-			// プレイヤー、エネミー、カメラがバトルに突入
-			m_Player.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
-			m_Target.transform.GetComponent<GrgrCharCtrl>().state.Change(GrgrCharCtrl.State.BATTLE);
-			GameData.GetCamera().GetComponent<CameraController>().phase.Change(CameraController.CameraPhase.BATTLE);
-
-			// バトルスタート
-			m_BattleStart = true;
-		}
+			//player.m_Battle = player.FrontBattle(target.transform);
+			//target.m_Battle = target.FrontBattle(player.transform);
 	}
 
 	// BATTLE_END終了処理
-	void BattleEndFin()
+	void 	BattleEndFin()
 	{
 		Time.timeScale = 1.0f;
 		BattleBoardData.skillChoiceBoard.gameObject.SetActive(false);
@@ -425,6 +467,8 @@ public class BattleManager : MonoBehaviour
 		m_BattleInterval = BATTLE_START_INTERVAL;
 		m_BattleStart = false;
 	}
+
+	public float m_BattleNormalTime = 0.8f;
 
 	// バトルリザルト更新
 	void ResultUpdate()
@@ -468,9 +512,17 @@ public class BattleManager : MonoBehaviour
 						BattleBoardData.skillChoiceBoard.gameObject.SetActive(false);
 						BattleBoardData.skillChoiceBoard.DestoryEnforcement();
                         StopCoroutine(m_BattleSlow);
-                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_BattleSlow = StartCoroutine(BattleSlow(m_BattleNormalTime, m_BattleNormalTime, 0, 0, m_BattleNormalTime, 0));
                         m_SlowEnd = true;
                     }
+
+					// アニメーション連続再生中
+					if (winner.m_AnmMgr.GetAnmList().Count > 1){
+						break;
+					}
+					if (winner.m_AnmMgr.GetState() == AnmState.CHAINE){
+						break;
+					}
 
                     // スローポイント
                     if (!m_SlowStart && (winner.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || winner.m_AnmMgr.GetPlayAnmData()._slowStartFrame <= winner.m_AnmMgr.GetFrame()))
@@ -554,9 +606,17 @@ public class BattleManager : MonoBehaviour
 						BattleBoardData.skillChoiceBoard.gameObject.SetActive(false);
 						BattleBoardData.skillChoiceBoard.DestoryEnforcement();
                         StopCoroutine(m_BattleSlow);
-                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_BattleSlow = StartCoroutine(BattleSlow(m_BattleNormalTime, m_BattleNormalTime, 0, 0, m_BattleNormalTime, 0));
                         m_SlowEnd = true;
                     }
+
+					// アニメーション連続再生中
+					if (winner.m_AnmMgr.GetAnmList().Count > 1){
+						break;
+					}
+					if (winner.m_AnmMgr.GetState() == AnmState.CHAINE){
+						break;
+					}
 
                     // スローポイント
                     if (!m_SlowStart && (winner.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || winner.m_AnmMgr.GetPlayAnmData()._slowStartFrame <= winner.m_AnmMgr.GetFrame()))
@@ -638,9 +698,17 @@ public class BattleManager : MonoBehaviour
 						BattleBoardData.skillChoiceBoard.gameObject.SetActive(false);
 						BattleBoardData.skillChoiceBoard.DestoryEnforcement();
                         StopCoroutine(m_BattleSlow);
-                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_BattleSlow = StartCoroutine(BattleSlow(m_BattleNormalTime, m_BattleNormalTime, 0, 0, m_BattleNormalTime, 0));
                         m_SlowEnd = true;
                     }
+
+					// アニメーション連続再生中
+					if (winner.m_AnmMgr.GetAnmList().Count > 1){
+						break;
+					}
+					if (winner.m_AnmMgr.GetState() == AnmState.CHAINE){
+						break;
+					}
 
                     // スローポイント
                     if (!m_SlowStart && (winner.m_AnmMgr.IsState(AnmState.END | AnmState.LOOP | AnmState.CHAINE) || winner.m_AnmMgr.GetPlayAnmData()._slowStartFrame <= winner.m_AnmMgr.GetFrame()))
@@ -716,9 +784,17 @@ public class BattleManager : MonoBehaviour
 						BattleBoardData.skillChoiceBoard.gameObject.SetActive(false);
 						BattleBoardData.skillChoiceBoard.DestoryEnforcement();
                         StopCoroutine(m_BattleSlow);
-                        m_BattleSlow = StartCoroutine(BattleSlow(1, 1, 0, 0, 1, 0));
+                        m_BattleSlow = StartCoroutine(BattleSlow(m_BattleNormalTime, m_BattleNormalTime, 0, 0, m_BattleNormalTime, 0));
                         m_SlowEnd = true;
                     }
+
+					// アニメーション連続再生中
+					if (winner.m_AnmMgr.GetAnmList().Count > 1){
+						break;
+					}
+					if (winner.m_AnmMgr.GetState() == AnmState.CHAINE){
+						break;
+					}
 
                     if ( m_Player.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsState(AnmState.END | AnmState.LOOP) && m_Target.transform.GetComponent<GrgrCharCtrl>().m_AnmMgr.IsState(AnmState.END | AnmState.LOOP))
 					{
@@ -745,7 +821,8 @@ public class BattleManager : MonoBehaviour
 	IEnumerator BattleSlow(float slowStart1, float slowEnd1, float slowTime1, float keepTime, float slowEnd2, float slowTime2)
 	{
 		SkillChoiceBoardController board = BattleBoardData.skillChoiceBoard;
-		m_TimePhase = TimePhase.SLOW;
+		m_TimePhase.Change(TimePhase.SLOW);
+		m_TimePhase.Start();
 
 		slowEnd = false;
 		keepEnd = false;
@@ -758,17 +835,24 @@ public class BattleManager : MonoBehaviour
 
 			if (slowEnd == true)
 			{
-				m_TimePhase = TimePhase.SLOW_END;
-				yield return null;
 				break;
 			}
+
 			Time.timeScale = speed.Current;
 			yield return null;
+			// TimePhase.Slowの更新
+			m_TimePhase.Update();
 		}
 
-		// 最遅スロー維持
+		// SLOW_END
+		m_TimePhase.Change(TimePhase.SLOW_END);
+		m_TimePhase.Start();
+		yield return null;
+
+		// 待機
 		float time = 0.0f;
-		m_TimePhase = TimePhase.KEEP;
+		m_TimePhase.Change(TimePhase.KEEP);
+		m_TimePhase.Start();
 		while (time < keepTime)
 		{
 
@@ -778,15 +862,20 @@ public class BattleManager : MonoBehaviour
 			}
 			time += Time.unscaledDeltaTime;
 			yield return null;
+			// TimePhase.KEEPの更新
+			m_TimePhase.Update();
 		}
 
-		m_TimePhase = TimePhase.SLOW_END;
+		// KEEP_END
+		m_TimePhase.Change(TimePhase.KEEP_END);
+		m_TimePhase.Start();
 		yield return null;
 
 
 		// 加速スロー
 		speed = UtilityMath.FLerp(Time.timeScale, slowEnd2, slowTime2, EaseType.OUT_EXP, 1, true);
-		m_TimePhase = TimePhase.QUICK;
+		m_TimePhase.Change(TimePhase.QUICK);
+		m_TimePhase.Start();
 		while (speed.MoveNext())
 		{
 			if (quickEnd == true){
@@ -794,9 +883,14 @@ public class BattleManager : MonoBehaviour
 			}
 			Time.timeScale = speed.Current;
 			yield return null;
+			// TimePhase.QUICKの更新
+			m_TimePhase.Update();
 		}
 
-		m_TimePhase = TimePhase.QUICK_END;
+		// QUICK_END
+		m_TimePhase.Change(TimePhase.QUICK_END);
+		m_TimePhase.Start();
 		yield return null;
+		m_TimePhase.Update();
 	}
 }

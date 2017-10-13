@@ -10,12 +10,19 @@ public class GameManager : MonoBehaviour {
 
     private void Awake()
     {
+        // フレームレート設定
+        Application.targetFrameRate = 30;
+
         // インプット
         InputManager.InstanceCheck();
 
-        // プラネット
-        m_Planet = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Planet"));
-        m_Planet.transform.SetParent(transform, true);
+        // プラネットマネージャー生成
+        GameObject planetManager = new GameObject("PlanetManager");
+        planetManager.AddComponent<PlanetManager>();
+        planetManager.transform.SetParent(transform);
+        // 球体生成
+        planetManager.GetComponent<PlanetManager>().CreatePlanet(new PlanetData("VanillaPlanet", Vector3.zero, 0, 100.0f));
+        m_Planet = planetManager.GetComponent<PlanetManager>().GetPlanet(PlanetID.PLANET_1);
 
         // プレイヤー
         m_Player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
@@ -54,6 +61,7 @@ public class GameManager : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+        prev = m_Player.transform.position;
     }
 	
 	// Update is called once per frame
@@ -65,7 +73,7 @@ public class GameManager : MonoBehaviour {
         // エネミー更新
         EnemyUpdate();
 	}
-
+    Vector3 prev;
     void PlayerUpdate()
     {
         // プレイヤー

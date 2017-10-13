@@ -231,6 +231,11 @@ public class AnimationManager : MonoBehaviour {
         return GetTransData(name1, name2);
     }
 
+    // 再生アニメーションリスト取得
+    public List<AnmData> GetAnmList(){
+        return m_AnmList;
+    }
+
     // 再生中のアニメーションデータを取得
     public AnmData GetPlayAnmData(){
         return m_AnmList[0];

@@ -83,9 +83,6 @@ public class GrgrCharCtrl : MonoBehaviour
     IEnumerator<Quaternion> qLerp;
     public IEnumerator m_Battle { get; set; }
 
-    // バトルシステム
-    System.Action m_BattleSystem;
-
     // 外部入力
     public TouchType m_TouchType { get; set; }
     public Vector3 m_CurrentVelocity { get; set; }
@@ -126,9 +123,6 @@ public class GrgrCharCtrl : MonoBehaviour
 
         // ギア変化インターバル初期化
         m_GearChangeInterval = 0.0f;
-
-        // バトルシステム初期化
-        m_BattleSystem = null;
 
         // 外部入力変数初期化
         m_TouchType = TouchType.None;
@@ -631,7 +625,11 @@ public class GrgrCharCtrl : MonoBehaviour
                 {
                     SkillData data = controller.GetResultData(gameObject, m_ResultPhase)._skill;
 
-                    m_AnmMgr.ChangeAnimationInFixedTime(data._anmName);
+
+
+                    m_AnmMgr.ChangeAnimationInFixedTime(data._anmName, "Jab");
+                    m_AnmMgr.ChainAnimation("Jab", "Spinkick");
+                    m_AnmMgr.ChainAnimation("Spinkick");
 
                     damage = data._attack;
                 }
@@ -642,6 +640,8 @@ public class GrgrCharCtrl : MonoBehaviour
                     // ガードの時は相手のタイミングを参照してアニメーションを再生する
                     AnmData data = m_AnmMgr.GetAnmData(controller.GetResultData(target, m_ResultPhase)._skill._anmName, "Common");
                     m_AnmMgr.ChangeAnmDataInFixedTime("Guard", -1, -1, -1, data._slowEndFrame, data._slowStartFrame);
+
+                    hp += controller.GetResultData(target, m_ResultPhase)._skill._attack;
                 }
                 break;
             // ダメージ
@@ -666,13 +666,16 @@ public class GrgrCharCtrl : MonoBehaviour
     IEnumerator damageAnm(GameObject target){
         yield return null;  
         GrgrCharCtrl obj = target.GetComponent<GrgrCharCtrl>(); 
-        while(obj.m_AnmMgr.GetState() == AnmState.CHANGE){
+        while(obj.m_AnmMgr.GetAnmList().Count > 1){
+            while(obj.m_AnmMgr.GetState() == AnmState.CHANGE){
+                yield return null;
+            }
+            while (obj.m_AnmMgr.GetPlayAnmData()._slowEndFrame >= obj.m_AnmMgr.GetFrame()){
+                yield return null;
+            }
+            m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
             yield return null;
         }
-        while (obj.m_AnmMgr.GetPlayAnmData()._slowEndFrame >= obj.m_AnmMgr.GetFrame()){
-            yield return null;
-        }
-        m_AnmMgr.ChangeAnimationInFixedTime("DAMAGED00");
     }
 
     // 正面衝突バトル
@@ -682,21 +685,30 @@ public class GrgrCharCtrl : MonoBehaviour
 
         Vector3 toTarget = target.position - transform.position;
         Vector3 front = Vector3.ProjectOnPlane(toTarget, transform.up).normalized;
+        float tmpSpeed = rigidbody.GetSpeed();
         transform.rotation = Quaternion.LookRotation(front, transform.up);
-        rigidbody.velocity = front * rigidbody.GetSpeed();
+        rigidbody.velocity = front * tmpSpeed;
 
+        // エンカウント時
         while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.BATTLE_ENCOUNT || GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_START)
         {
             rigidbody.velocity = Vector3.ProjectOnPlane(rigidbody.velocity, transform.up).normalized * rigidbody.GetSpeed();
             GrgrMove(rigidbody.velocity * Time.deltaTime, 0.0f);
             yield return null;
         }
+        rigidbody.velocity = rigidbody.velocity.normalized * tmpSpeed;
 
+        // スタート時
+        while(GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_START){
+            yield return null;
+        }
+        // プレイ時
         while (GameData.GetBattleManager().m_Battle.current == BattleManager.Battle.SKILL_BATTLE_PLAY)
         {
             BattleResultUpdate(target.gameObject);
             yield return null;
         }
+
     }
 
     // 背面バトル
