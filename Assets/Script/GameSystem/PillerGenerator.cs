@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class PillerGenerator : MonoBehaviour {
 
+	private PlanetManager m_PlanetManager;
+	
 	public Transform pillers;
 	public int INI_PILLER_NUMS = 500;
 	public float INTERVAL = 5.0f;
@@ -53,10 +55,15 @@ public class PillerGenerator : MonoBehaviour {
 			}
 			GameObject clone = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Piller"), Vector3.zero, transform.rotation);
 			clone.transform.SetParent(pillers, false);
+			clone.GetComponent<BaseCore>().m_PlanetManager = m_PlanetManager;
 			return true;
 	}
 
 	bool IsMaxPiller(){
 		return (pillers.childCount == MAX_PILLER);
+	}
+
+	public void SetPlanet(PlanetManager planetManager){
+		m_PlanetManager = planetManager;
 	}
 }

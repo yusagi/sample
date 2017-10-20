@@ -22,7 +22,6 @@ public class SkillData{
 		public int _ap{get;set;}
 		public int _attack{get;set;}
 		public ActionType _type{get;set;}
-		public Transform _object{get;set;}
 }
 
 public class SkillDataBase{
@@ -35,7 +34,7 @@ public class SkillDataBase{
 	};
 
     public static Dictionary<string, SkillData> ENEMY_DATAS = new Dictionary<string, SkillData>(){
-        //{"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
+        {"Jab", new SkillData("ジャブ", "Jab", 10, 20, ActionType.NORMAL_ATTACK)},
         {"Hikick", new SkillData("キック","Hikick", /*15*/0, 30, ActionType.NORMAL_ATTACK)},
         {"Spinkick", new SkillData("スピンキック", "Spinkick", /*20*/0, 50, ActionType.GUARD_BREAK_ATTACK)},
         //{"Counter", new SkillData("カウンター", "Counter", 30, 0, ActionType.COUNTER_ATTACK)},

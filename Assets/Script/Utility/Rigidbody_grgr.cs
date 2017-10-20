@@ -4,6 +4,28 @@ using UnityEngine;
 
 public class Rigidbody_grgr {
 
+	// ある座標からVelocity分移動した回転を取得(成功したらtrueを返す)
+	public static bool MoveToRotation(out Quaternion rotation, Vector3 center, float radius, Vector3 position, Vector3 velocity, Vector3 forward){
+		float tmpSpeed = velocity.magnitude;
+		if (tmpSpeed > Vector3.kEpsilon || center == position){
+			float arc = tmpSpeed;
+			float angle = (arc * 360.0f) / (2 * Mathf.PI * radius);
+
+			Vector3 up = position - center;
+			Vector3 front = Vector3.ProjectOnPlane(velocity, up).normalized;
+			Quaternion baseRot = Quaternion.LookRotation(front, up);
+			Quaternion rot = Quaternion.AngleAxis(angle, baseRot * Vector3.right) * baseRot;
+			rot = Quaternion.LookRotation(Vector3.ProjectOnPlane(forward, rot * Vector3.up), rot * Vector3.up);
+
+			rotation = rot;
+			return true;
+		}
+		else{
+			rotation = Quaternion.identity;
+			return false;
+		}
+	}
+
 	// 座標からプラネット垂直な回転を求める
 	public static Quaternion PositionToRotate(Vector3 center, Vector3 position, Vector3 front){
 		Vector3 up = (position - center);

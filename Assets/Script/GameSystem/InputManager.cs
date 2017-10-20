@@ -22,7 +22,7 @@ public class InputManager : SingletonBefaviour<InputManager>
     private bool isPlanetTouch;
 
     private float touchTimer;
-    private float FLICK_SUCCESS_TIME = 1.0f;
+    private float FLICK_SUCCESS_TIME = 10.0f;
 
     protected virtual void OnCreateSingleTon()
     {

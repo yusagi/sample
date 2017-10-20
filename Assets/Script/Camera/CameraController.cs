@@ -38,7 +38,9 @@ public class CameraController : MonoBehaviour {
 
     #region メンバ変数
 
+
     private Transform m_Player;
+	private BattleManager m_BattleManager;
 
 	public Vector3 offsetPos{get;set;}
 	public float offsetVAngle{get; set;}
@@ -67,30 +69,36 @@ public class CameraController : MonoBehaviour {
 
 #endregion
 
+	public void SetMainPlayer(Transform player){
+		m_Player = player;
+	}
+
+	public void SetBattleManager(BattleManager battleManager){
+		m_BattleManager = battleManager;
+	}
+
 
 #region Unity関数
 
 	// Use this for initialization
 	void Start ()
     {
-        m_Player = GameManager.m_Player.transform;
-
         baseRotate = m_Player.rotation;
-        transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, NORMAL_OFFSET_V_ANGLE);
-        transform.position = OffsetPos(transform.rotation, m_Player.position, NORMAL_OFFSET_POS);
+        transform.rotation = RotateXYAxis(baseRotate, offsetHAngle, NORMAL_OFFSET_BACK_V_ANGLE);
+        transform.position = OffsetPos(transform.rotation, m_Player.position, NORMAL_OFFSET_BACK_POS);
 
         phase.Change(CameraPhase.NORMAL);
 
         offsetHAngle = 0.0f;
-        offsetVAngle = NORMAL_OFFSET_V_ANGLE;
-        offsetPos = NORMAL_OFFSET_POS;
-        dirType = DirType.FRONT;
+        offsetVAngle = NORMAL_OFFSET_BACK_V_ANGLE;
+        offsetPos = NORMAL_OFFSET_BACK_POS;
+        dirType = DirType.BACK;
 
         hRotate = UtilityMath.FLerp(offsetHAngle, offsetHAngle);
         while (hRotate.MoveNext()) ;
-        vRotate = UtilityMath.FLerp(NORMAL_OFFSET_V_ANGLE, NORMAL_OFFSET_V_ANGLE);
+        vRotate = UtilityMath.FLerp(NORMAL_OFFSET_BACK_V_ANGLE, NORMAL_OFFSET_BACK_V_ANGLE);
         while (vRotate.MoveNext()) ;
-        osPos = UtilityMath.VLerp(NORMAL_OFFSET_POS, NORMAL_OFFSET_POS);
+        osPos = UtilityMath.VLerp(NORMAL_OFFSET_BACK_POS, NORMAL_OFFSET_BACK_POS);
         while (osPos.MoveNext()) ;
     }
 	
@@ -105,11 +113,12 @@ public class CameraController : MonoBehaviour {
 		switch(phase.current){
 			// 通常
 			case CameraPhase.NORMAL: {
-				DirType current = CheckDirType();
+				DirType current = DirType.BACK; //CheckDirType();
 	
-	if (DBG_IS_NORMAL_FRONTONLY){
-		current = DirType.FRONT;
-	}
+			if (DBG_IS_NORMAL_FRONTONLY){
+				current = DirType.FRONT;
+			}
+
 				float vAngle = 0.0f;
 				Vector3 offset = Vector3.zero;
 				// プレイヤー進行方向
@@ -136,16 +145,16 @@ public class CameraController : MonoBehaviour {
 				if (phase.IsFirst()){
 					float vAngle = 0.0f;
 					Vector3 offset = Vector3.zero;
-					m_BattleOffsetVAngle = offsetVAngle;
-					m_BattleOffsetPos = offsetPos;
+					m_BattleOffsetVAngle = NORMAL_OFFSET_V_ANGLE; //offsetVAngle;
+					m_BattleOffsetPos = NORMAL_OFFSET_POS; //offsetPos;
 					vRotate = UtilityMath.FLerp(offsetVAngle, m_BattleOffsetVAngle);
 					osPos = UtilityMath.VLerp(osPos.Current, m_BattleOffsetPos);
 				}
 				// バトルモード状態
-				switch(GameData.GetBattleManager().m_Battle.current){
+				switch(m_BattleManager.m_Battle.current){
 					// バトル終了
 					case BattleManager.Battle.BATTLE_END:{
-						if(GameData.GetBattleManager().m_Battle.IsFirst()){
+						if(m_BattleManager.m_Battle.IsFirst()){
 							phase.Change(CameraPhase.NORMAL);
 						}
 					}
@@ -189,7 +198,7 @@ public class CameraController : MonoBehaviour {
 
 	// プレイヤーの進行方向確認
 	DirType CheckDirType(){
-		Vector3 vel =m_Player.GetComponent<GrgrCharCtrl>().rigidbody.velocity;
+		Vector3 vel =m_Player.transform.forward;
 		if (vel.magnitude < UtilityMath.epsilon){
 			return DirType.FRONT;
 		}
@@ -235,60 +244,60 @@ public class CameraController : MonoBehaviour {
 	}
 
 	// 現在のカメラの枠内か？
-	public bool IsInCameraFramework(){
-		bool result = true;
+	// public bool IsInCameraFramework(){
+	// 	bool result = true;
 
-		Vector3 tmpPos = transform.position;
-		Quaternion tmpRot = transform.rotation;
+	// 	Vector3 tmpPos = transform.position;
+	// 	Quaternion tmpRot = transform.rotation;
 
-		Vector3 position = Vector3.zero;
-		float vAngle = 0.0f;
-		switch(dirType){
-			case DirType.FRONT:{
-				position = BATTLE_START_POS;
-				vAngle = BATTLE_START_V_ANGLE;
-			}
-			break;
-			case DirType.BACK:{
-				position = NORMAL_OFFSET_BACK_POS;
-				vAngle = NORMAL_OFFSET_BACK_V_ANGLE; 
-			}
-			break;
-		}
-		// position = offsetPos;
-		// vAngle = offsetVAngle;
+	// 	Vector3 position = Vector3.zero;
+	// 	float vAngle = 0.0f;
+	// 	switch(dirType){
+	// 		case DirType.FRONT:{
+	// 			position = BATTLE_START_POS;
+	// 			vAngle = BATTLE_START_V_ANGLE;
+	// 		}
+	// 		break;
+	// 		case DirType.BACK:{
+	// 			position = NORMAL_OFFSET_BACK_POS;
+	// 			vAngle = NORMAL_OFFSET_BACK_V_ANGLE; 
+	// 		}
+	// 		break;
+	// 	}
+	// 	// position = offsetPos;
+	// 	// vAngle = offsetVAngle;
 
-		// 回転
-		transform.rotation = RotateXYAxis(GetBaseRotate(baseRotate, m_Player.up), offsetHAngle, vAngle);
-		// 座標設定
-		transform.position = OffsetPos(transform.rotation, m_Player.position, position);
+	// 	// 回転
+	// 	transform.rotation = RotateXYAxis(GetBaseRotate(baseRotate, m_Player.up), offsetHAngle, vAngle);
+	// 	// 座標設定
+	// 	transform.position = OffsetPos(transform.rotation, m_Player.position, position);
 
-		// ターゲット座標
-		Vector3 t = GameManager.m_Enemy.transform.position + GameManager.m_Enemy.transform.up * (GameManager.m_Enemy.transform.GetComponent<CapsuleCollider>().height);
-		Vector3 sPos = Camera.main.WorldToScreenPoint(t);
-		if (sPos.x < 0 || sPos.x > Screen.width)
-			result = false;
+	// 	// ターゲット座標
+	// 	Vector3 t = GameManager.m_Enemy.transform.position + GameManager.m_Enemy.transform.up * (GameManager.m_Enemy.transform.GetComponent<CapsuleCollider>().height);
+	// 	Vector3 sPos = Camera.main.WorldToScreenPoint(t);
+	// 	if (sPos.x < 0 || sPos.x > Screen.width)
+	// 		result = false;
 
-		float h = 100;
-		if (sPos.y - h < 0 || sPos.y > Screen.height - h)
-			result = false;
+	// 	float h = 100;
+	// 	if (sPos.y - h < 0 || sPos.y > Screen.height - h)
+	// 		result = false;
 
-		Ray ray = Camera.main.ScreenPointToRay(sPos);
-		RaycastHit hit;
-		if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(LayerMask.PLAYER | LayerMask.PILLER)))){
-			if (hit.collider.tag == "Planet"){
-				result = false;
-			}
-		}
-		else{
-			result = false;
-		}
+	// 	Ray ray = Camera.main.ScreenPointToRay(sPos);
+	// 	RaycastHit hit;
+	// 	if (Physics.Raycast(ray, out hit, Mathf.Infinity, (int)(~(LayerMask.PLAYER | LayerMask.PILLER)))){
+	// 		if (hit.collider.tag == "Planet"){
+	// 			result = false;
+	// 		}
+	// 	}
+	// 	else{
+	// 		result = false;
+	// 	}
 
-		transform.position = tmpPos;
-		transform.rotation = tmpRot;
+	// 	transform.position = tmpPos;
+	// 	transform.rotation = tmpRot;
 
-		return result;
-	}
+	// 	return result;
+	// }
 
 	// rotateの体勢で上方向がupと並行になる回転を取得
 	public Quaternion GetBaseRotate(Quaternion rotate, Vector3 up){

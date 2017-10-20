@@ -4,27 +4,21 @@ using UnityEngine;
 
 public class PillerController : MonoBehaviour {
 
-#region メンバ変数
-
-	// 付属クラス
-	public Rigidbody_grgr rigidbody;
-
 	// 地上からの高さ調整
 	public float HEIGHT_FROM_GROUND;
 
-    #endregion
+    // 惑星
+    private Transform m_Planet;
 
-#region Unity関数
     void Start()
     {
-        rigidbody = new Rigidbody_grgr(transform);
-        transform.position = Rigidbody_grgr.RotateToPosition(transform.up, GameManager.m_Planet.transform.position, GameManager.m_Planet.transform.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
+        transform.position = Rigidbody_grgr.RotateToPosition(transform.up, m_Planet.position, m_Planet.localScale.y * 0.5f, HEIGHT_FROM_GROUND);
     }
 
     void Update(){
-		rigidbody.Update();
 	}
 
-#endregion
-
+    public void SetPlanet(Transform planet){
+        m_Planet = planet;
+    }
 }

@@ -7,6 +7,8 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 	public int vertexNums = 361;
 	public float width = 1.0f;
 	public float arc{get;set;}
+	public Transform m_Planet;
+	public CharCore m_Core;
 
 	private int prevVertexNums;
 	private LineRenderer lineDraw;
@@ -17,15 +19,18 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 		}
 		lineDraw.material = new Material(Shader.Find("Particles/Additive"));
 		lineDraw.SetColors(Color.yellow, Color.yellow);
+
 	}
 
 	// Use this for initialization
 	void Start () {
-		DrawLine();
+		m_Planet = m_Core.m_PlanetManager.GetPlanet(m_Core.GetPlanetID()).transform;
+		arc = m_Core.m_BattleManager.BATTLE_START_DISTANCE;
+		//DrawLine();
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void LateUpdate () {
 		lineDraw.widthMultiplier = width;
 		DrawLine();
 	}
@@ -34,13 +39,13 @@ public class BattleAreaLineRenderer : MonoBehaviour {
 		lineDraw.numPositions = vertexNums;
 		List<Vector3> vertexs = new List<Vector3>();
 		Quaternion pRotate = transform.rotation;
-		float vAngle = Rigidbody_grgr.Angle(arc, GameManager.m_Planet.transform.localScale.y * 0.5f);
+		float vAngle = Rigidbody_grgr.Angle(arc, m_Planet.localScale.y * 0.5f);
 		for(int i = 0; i <= vertexNums; i++){
 			Vector3 p;
 			Quaternion rotate = Quaternion.AngleAxis(i, pRotate * Vector3.up) * pRotate;
 			rotate = Quaternion.AngleAxis(vAngle, rotate * Vector3.right) * rotate;
 
-			p = GameManager.m_Planet.transform.position + (rotate * Vector3.up * (GameManager.m_Planet.transform.localScale.y * 0.5f + 0.1f));
+			p = m_Planet.position + (rotate * Vector3.up * (m_Planet.localScale.y * 0.5f + 0.1f));
 			vertexs.Add(p);
 		}
 		lineDraw.SetPositions(vertexs.ToArray());

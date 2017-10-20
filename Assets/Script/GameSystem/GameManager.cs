@@ -2,155 +2,96 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour {
 
-    public static GameObject m_Planet { get; set; }
-    public static GameObject m_Player { get; set; }
-    public static GameObject m_Enemy { get; set; }
+public class GameManager : MonoBehaviour {
+    // キャンバス
+    public Transform m_Canvas;
+    // スキルバトルマネージャー
+    public SkillBattleManager m_SkillBattleManager;
 
     private void Awake()
     {
         // フレームレート設定
         Application.targetFrameRate = 30;
 
-        // インプット
+        // InputManager生成
         InputManager.InstanceCheck();
 
         // プラネットマネージャー生成
-        GameObject planetManager = new GameObject("PlanetManager");
-        planetManager.AddComponent<PlanetManager>();
-        planetManager.transform.SetParent(transform);
-        // 球体生成
-        planetManager.GetComponent<PlanetManager>().CreatePlanet(new PlanetData("VanillaPlanet", Vector3.zero, 0, 100.0f));
-        m_Planet = planetManager.GetComponent<PlanetManager>().GetPlanet(PlanetID.PLANET_1);
-
-        // プレイヤー
-        m_Player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
-        m_Player.name = "Player";
-        m_Player.layer = (int)Layer.PLAYER;
-        m_Player.transform.SetParent(transform, true);
-        m_Player.AddComponent<BattleAreaLineRenderer>().arc = GameData.GetBattleManager().BATTLE_START_DISTANCE;
-        foreach(var data in SkillDataBase.PLAYER_DATAS)
-        {
-            m_Player.GetComponent<GrgrCharCtrl>().skillManager.AddSkill(data.Value);
-        }
-
-        // エネミー
-        m_Enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor"));
-        m_Enemy.name = "Enemy";
-        m_Enemy.layer = (int)Layer.ENEMY;
-        m_Enemy.transform.rotation = Quaternion.AngleAxis(180.0f, Vector3.right) * Quaternion.identity;
-        m_Enemy.transform.SetParent(transform, true);
-        foreach (var data in SkillDataBase.ENEMY_DATAS)
-        {
-            m_Enemy.GetComponent<GrgrCharCtrl>().skillManager.AddSkill(data.Value);
-        }
-
-        // ピラー
-        GameData.GetPillerGenerator().GetComponent<PillerGenerator>().enabled = true;
-
-        // バトルマネージャー
-        if (m_Enemy != null)
-        {
-            GameData.GetBattleManager().enabled = true;
-        }
-        // カメラ
-        GameData.GetCamera().GetComponent<CameraController>().enabled = true;
+        GameObject planet = new GameObject("PlanetManager");
+        PlanetManager planetManager = planet.AddComponent<PlanetManager>();
         
+        // プレイヤー生成
+        GameObject player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor/Player"));
+        CharCore playerCore = player.GetComponent<CharCore>();
+
+        // 敵生成
+        GameObject enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor/Enemy"));
+        CharCore enemyCore = enemy.GetComponent<CharCore>();
+
+        // バトルマネージャー生成
+        GameObject battleManagerObj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BattleManager"));
+        BattleManager battleManager = battleManagerObj.GetComponent<BattleManager>();
+
+        // ピラージェネレーター生成
+        GameObject pillerGeneratorObj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/PillerGenerator"));
+        PillerGenerator pillerGenerator = pillerGeneratorObj.GetComponent<PillerGenerator>();
+
+        // カメラ生成
+        GameObject camera = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Main Camera"));
+        CameraController cameraCtrl = camera.GetComponent<CameraController>();
+
+        // プラネットマネージャー初期化
+        planet.transform.SetParent(transform);
+        // 球体生成
+        planetManager.CreatePlanet(new PlanetData("VanillaPlanet", Vector3.zero, (int)PlanetID.PLANET_1, 100.0f));
+
+        // プレイヤー初期化
+        player.transform.SetParent(transform);
+        playerCore.m_BattleManager = battleManager;
+        playerCore.m_PlanetManager = planetManager;
+        playerCore.GetBrain().SetLookBase(camera.transform);
+        playerCore.SetPlanetID(PlanetID.PLANET_1);
+        // プレイヤースキル初期化
+        SkillManager pSkillManager = playerCore.GetBrain().GetState().GetSkillManager();
+        foreach (var data in SkillDataBase.PLAYER_DATAS){
+            pSkillManager.AddSkill(data.Value);
+        }
+
+        // 敵初期化
+        enemy.transform.SetParent(transform);
+        enemyCore.m_BattleManager = battleManager;
+        enemyCore.m_PlanetManager = planetManager;
+        enemyCore.GetBrain().SetLookBase(enemy.transform);
+        enemyCore.SetPlanetID(PlanetID.PLANET_1);
+        // 敵スキル初期化
+        SkillManager eSkillManager = enemyCore.GetBrain().GetState().GetSkillManager();
+        foreach (var data in SkillDataBase.ENEMY_DATAS){
+            eSkillManager.AddSkill(data.Value);
+        }
+
+
+        // バトルマネージャー初期化
+        battleManagerObj.transform.SetParent(transform);
+        battleManager.SetBattleCharInfo(playerCore, enemyCore);
+        battleManager.SetBattleManagerInfo(planetManager.GetPlanet((int)PlanetID.PLANET_1).transform, m_Canvas, cameraCtrl, m_SkillBattleManager);
+
+        // スキルマネージャー初期化
+        m_SkillBattleManager.SetPlayerObject(player);
+
+        // ピラージェネレター初期化
+        pillerGenerator.SetPlanet(planetManager);
+
+        // カメラ初期化
+        cameraCtrl.SetMainPlayer(player.transform);
+        cameraCtrl.SetBattleManager(battleManager);
     }
 
     // Use this for initialization
     void Start () {
-        prev = m_Player.transform.position;
     }
 	
 	// Update is called once per frame
 	void Update () {
-
-        // プレイヤー更新
-        PlayerUpdate();
-
-        // エネミー更新
-        EnemyUpdate();
 	}
-    Vector3 prev;
-    void PlayerUpdate()
-    {
-        // プレイヤー
-        GrgrCharCtrl GrgrCharCtrl = m_Player.GetComponent<GrgrCharCtrl>();
-        TouchType touchType = TouchController.GetTouchType();
-        if (touchType == TouchType.Drag){
-            touchType = (TouchController.IsFlickSuccess()) ? TouchType.None : TouchType.Drag;
-        }
-        if (TouchController.IsPlanetTouch())
-        {
-            if (touchType == TouchType.Drag){
-                GrgrCharCtrl.m_CurrentVelocity = -TouchController.GetDragVelocity();
-            }
-            else if (touchType == TouchType.Frick){
-                GrgrCharCtrl.m_CurrentVelocity = -TouchController.GetFlickVelocity();
-            }
-            GrgrCharCtrl.m_TouchType = touchType;
-        }
-        else
-        {
-            GrgrCharCtrl.m_CurrentVelocity = Vector3.zero;
-            GrgrCharCtrl.m_TouchType = TouchType.None;
-        }
-        GrgrCharCtrl.m_CurrentRotate = Camera.main.transform.rotation;
-
-        if (GrgrCharCtrl.state.current == GrgrCharCtrl.State.FLICK_MOVE)
-        {
-            // ビタ止め移行モーション変化
-            {
-                if (TouchController.IsPlanetTouch())
-                {
-                    if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME * 0.5f){
-                        GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
-                    }
-                    else{
-                        GrgrCharCtrl.m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
-                    }
-
-                    if (TouchController.GetTouchTimer() > GrgrCharCtrl.MOVE_TOUCH_STOP_TIME)
-                    {
-                        GrgrCharCtrl.m_TouchStopFlag = true;
-                    }
-                }
-            }
-        }
-    }
-
-    private float FRICK_TIMER = 1.0f;
-    private int FRICK_COUNT = 10;
-    private int m_FrickCount = 0;
-    private float m_FrickTimer = 0.0f;
-
-    void EnemyUpdate()
-    {
-        GrgrCharCtrl enemyController = m_Enemy.GetComponent<GrgrCharCtrl>();
-        enemyController.m_TouchType = TouchType.None;
-
-        if (m_FrickTimer > 0)
-        {
-            m_FrickTimer -= Time.deltaTime;
-            enemyController.m_CurrentVelocity = Vector3.zero;
-        }
-        else
-        {
-            if (m_FrickCount == 0)
-            {
-                m_FrickCount = FRICK_COUNT;
-                if (enemyController.state.current == GrgrCharCtrl.State.FLICK_MOVE){
-                //enemyController.transform.rotation = Quaternion.AngleAxis(Random.Range(0.0f, 359.0f), enemyController.transform.up) * enemyController.transform.rotation;
-                }
-            }
-
-            enemyController.m_CurrentVelocity = Vector3.forward * 1080.0f;
-            enemyController.m_CurrentRotate = enemyController.transform.rotation;
-            m_FrickCount -= 1;
-            m_FrickTimer = FRICK_TIMER;
-            enemyController.m_TouchType = TouchType.Frick;
-        }
-    }
 }

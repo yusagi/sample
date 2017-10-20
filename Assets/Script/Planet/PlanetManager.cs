@@ -13,7 +13,7 @@ public class PlanetManager : MonoBehaviour {
 			Debug.LogError("out of range CreatePlanet");
 		}
 		// 生成
-        GameObject obj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/" + data._name));
+        GameObject obj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Planet/" + data._name));
 		obj.transform.SetParent(transform);
 		obj.transform.localScale = new Vector3(data._size, data._size, data._size);
 		PlanetBase pBase = obj.GetComponent<PlanetBase>();
