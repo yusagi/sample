@@ -9,8 +9,9 @@ public class GameManager : MonoBehaviour {
     // スキルバトルマネージャー
     public SkillBattleManager m_SkillBattleManager;
 
-    private void Awake()
-    {
+    public CurrentSpeed m_CurrentSpeed;
+
+    private void Awake(){
         // フレームレート設定
         Application.targetFrameRate = 30;
 
@@ -34,8 +35,8 @@ public class GameManager : MonoBehaviour {
         BattleManager battleManager = battleManagerObj.GetComponent<BattleManager>();
 
         // ピラージェネレーター生成
-        GameObject pillerGeneratorObj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/PillerGenerator"));
-        PillerGenerator pillerGenerator = pillerGeneratorObj.GetComponent<PillerGenerator>();
+        // GameObject pillerGeneratorObj = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/PillerGenerator"));
+        // PillerGenerator pillerGenerator = pillerGeneratorObj.GetComponent<PillerGenerator>();
 
         // カメラ生成
         GameObject camera = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Main Camera"));
@@ -52,11 +53,6 @@ public class GameManager : MonoBehaviour {
         playerCore.m_PlanetManager = planetManager;
         playerCore.GetBrain().SetLookBase(camera.transform);
         playerCore.SetPlanetID(PlanetID.PLANET_1);
-        // プレイヤースキル初期化
-        SkillManager pSkillManager = playerCore.GetBrain().GetState().GetSkillManager();
-        foreach (var data in SkillDataBase.PLAYER_DATAS){
-            pSkillManager.AddSkill(data.Value);
-        }
 
         // 敵初期化
         enemy.transform.SetParent(transform);
@@ -64,12 +60,6 @@ public class GameManager : MonoBehaviour {
         enemyCore.m_PlanetManager = planetManager;
         enemyCore.GetBrain().SetLookBase(enemy.transform);
         enemyCore.SetPlanetID(PlanetID.PLANET_1);
-        // 敵スキル初期化
-        SkillManager eSkillManager = enemyCore.GetBrain().GetState().GetSkillManager();
-        foreach (var data in SkillDataBase.ENEMY_DATAS){
-            eSkillManager.AddSkill(data.Value);
-        }
-
 
         // バトルマネージャー初期化
         battleManagerObj.transform.SetParent(transform);
@@ -80,11 +70,13 @@ public class GameManager : MonoBehaviour {
         m_SkillBattleManager.SetPlayerObject(player);
 
         // ピラージェネレター初期化
-        pillerGenerator.SetPlanet(planetManager);
+        //pillerGenerator.SetPlanet(planetManager);
 
         // カメラ初期化
         cameraCtrl.SetMainPlayer(player.transform);
         cameraCtrl.SetBattleManager(battleManager);
+
+        m_CurrentSpeed.SetPlayer(playerCore.GetBrain().GetInfo());
     }
 
     // Use this for initialization

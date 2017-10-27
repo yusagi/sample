@@ -74,48 +74,48 @@ public class Rigidbody_grgr {
 		return RotateToPosition(up, center, planetRad);
 	}
 
-#region メンバ変数
+// #region メンバ変数
 
-	public float maxVelocitySpeed {get;set;}
-	public Vector3 velocity{ get; set;}
-	public Vector3 prevVelocity{get; set;}
-	public Vector3 prevPosition{get;set;}
-	public bool isMove{get;set;}
-	public float friction{get;set;}
+// 	public float maxVelocitySpeed {get;set;}
+// 	public Vector3 velocity{ get; set;}
+// 	public Vector3 prevVelocity{get; set;}
+// 	public Vector3 prevPosition{get;set;}
+// 	public bool isMove{get;set;}
+// 	public float friction{get;set;}
 
-	private Transform my;
+// 	private Transform my;
 
-#endregion
+// #endregion
 
-	public Rigidbody_grgr(Transform obj){
-		my = obj;
-		maxVelocitySpeed = Mathf.Infinity;
-		velocity = Vector3.zero;
-		prevVelocity = velocity;
-		prevPosition = my.position;
-		isMove = true;
-		friction = 0.001f;
-	}
+// 	public Rigidbody_grgr(Transform obj){
+// 		my = obj;
+// 		maxVelocitySpeed = Mathf.Infinity;
+// 		velocity = Vector3.zero;
+// 		prevVelocity = velocity;
+// 		prevPosition = my.position;
+// 		isMove = true;
+// 		friction = 0.001f;
+// 	}
 	
-	// Update is called once per frame
-	public void Update () {
-		velocity *= (1 - friction);
+// 	// Update is called once per frame
+// 	public void Update () {
+// 		velocity *= (1 - friction);
 
-		if (isMove)
-			my.position += velocity;
-	}
+// 		if (isMove)
+// 			my.position += velocity;
+// 	}
 
-	public void AddForce(Vector3 force){
-		Vector3 vel = velocity + force;
-		float speed = Mathf.Min(vel.magnitude, maxVelocitySpeed);
-		velocity = vel.normalized * speed;
-	}
+// 	public void AddForce(Vector3 force){
+// 		Vector3 vel = velocity + force;
+// 		float speed = Mathf.Min(vel.magnitude, maxVelocitySpeed);
+// 		velocity = vel.normalized * speed;
+// 	}
 
-	public float GetSpeed(){
-		return velocity.magnitude;
-	}
+// 	public float GetSpeed(){
+// 		return velocity.magnitude;
+// 	}
 
-	public float GetPrevSpeed(){
-		return prevVelocity.magnitude;
-	}
+// 	public float GetPrevSpeed(){
+// 		return prevVelocity.magnitude;
+// 	}
 }

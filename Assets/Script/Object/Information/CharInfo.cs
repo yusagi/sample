@@ -16,17 +16,25 @@ public class CharInfo : BaseObjInfo {
 	[Tooltip("ギア3加速度")] public float GEAR_THIRD_ACCELE;
 
 	[Space(1)]
+	[Header("ビタ止め")]
+	[Tooltip("ビタ止め値")] public float PUSH_STOP_TIME; 
+
+	[Space(1)]
 	[Header("速度")]
 	[Tooltip("フリック移動最高速度")] public float FLICK_MAX_SPEED;
 	[Tooltip("現在の進行ベクトル")] public Vector3 m_CurrentVelocity;
 	[Tooltip("現在の速度")] public float m_CurrentSpeed;
 
 	[Space(1)]
-	[Header("回転")]
-	[Tooltip("現在の回転")] public Quaternion m_CurrentRotate;
+	[Header("向き")]
+	[Tooltip("現在の前方向")] public Vector3 m_CurrentFront;
+
+	[Space(1)]
+	[Header("ジャンプ")]
+	[Tooltip("現在のジャンプ力")] public float m_Jamp;
 
 	[Space(1)]
 	[Header("体力")]
-	[Tooltip("初期体力")] public int START_HP;
+	[Tooltip("最大体力")] public int MAX_HP;
 	[Tooltip("残り体力")] public int m_HP;
 }

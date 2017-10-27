@@ -23,6 +23,11 @@ public class BaseCore : MonoBehaviour {
 	void Update(){
 		CoreUpdate();
 	}
+	
+	void OnCollisionEnter(Collision other)
+	{
+		CoreCollisionEnter(other);
+	}
 
 	protected virtual void CoreAwake(){
 
@@ -35,6 +40,11 @@ public class BaseCore : MonoBehaviour {
 	protected virtual void CoreUpdate(){
 		Transform planet = m_PlanetManager.GetPlanet(GetPlanetID()).transform;
 		m_Stand.Stand(planet.position, planet.localScale.y * 0.5f, GROUND_UP);
+	}
+
+	protected virtual void CoreCollisionEnter(Collision other){
+
+
 	}
 
 	public void SetPlanetID(PlanetID id){

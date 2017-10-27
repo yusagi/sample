@@ -180,10 +180,10 @@ public class CameraController : MonoBehaviour {
 	float DragAngle(){
 		float drag = 0.0f;
 
-		if (TouchController.IsPlanetTouch())
+		if (InputManager.IsPlanetTouch())
 			return drag;
 
-		drag = TouchController.GetDragVelocity().x;
+		drag = InputManager.GetDragVelocity().x;
 		if (drag >= 0){
 			drag = Mathf.Sqrt(Mathf.Pow(drag, 2));
 		}

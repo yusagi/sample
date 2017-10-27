@@ -7,6 +7,9 @@ public class SkillUIButton : MonoBehaviour{
 	public SkillBattleManager m_SkillBattleManager;
 
 	public void Choice(){
-		m_SkillBattleManager.AddChoice(m_PlayerUIField.GetPlayerObject(), transform.GetChild(0));
+		if (transform.childCount > 0){
+			m_SkillBattleManager.AddChoice(m_PlayerUIField.GetPlayerObject(), transform.GetChild(0));
+			m_SkillBattleManager.PlayerFieldButtonDisable();
+		}
 	}
 }

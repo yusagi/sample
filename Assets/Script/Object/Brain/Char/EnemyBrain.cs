@@ -17,6 +17,9 @@ public class EnemyBrain : CharBrain {
 
 		Quaternion rot = Quaternion.LookRotation(Vector3.back, Vector3.down);
 		transform.rotation = rot;
+
+		// スキルデータ管理設定
+		((DeckManager)m_State.GetSkillDataManager()).SetDeck(DeckDataBase.ENEMY_DECK);
 	}
 
 	// 更新

@@ -4,6 +4,8 @@ using UnityEngine;
 
 [RequireComponent(typeof(GrgrStand))]
 public class GrgrMove : MonoBehaviour {
+
+	[SerializeField] private GrgrStand m_Stand;
 	
 	public void Move(Vector3 center, float radius, Vector3 velocity, float jamp = 0.0f){
 		float tmpSpeed = velocity.magnitude;
@@ -16,7 +18,7 @@ public class GrgrMove : MonoBehaviour {
 
 			transform.rotation = rot;
 
-			GetComponent<GrgrStand>().Stand(center, radius, jamp);
+			m_Stand.Stand(center, radius, jamp);
 		}
 	}
 }

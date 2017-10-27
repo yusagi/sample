@@ -5,37 +5,9 @@ using UnityEngine;
 [RequireComponent(typeof(AnimationManager))]
 public class CharState : StateBase {
 
-	// 状態
-	public enum State{
-		STOP,			// 立ち止まり
-		DRAG_MOVE,		// ドラッグ移動
-		FLICK_MOVE,		// フリック移動
-		BATTLE,			// バトル
-
-		NONE,
-	}
-
-	//  頭脳コンポーネント参照
-	[SerializeField] protected CharBrain m_Brain;
-	// アニメーションマネージャー
-	[SerializeField] protected AnimationManager m_AnmMgr;
-	// スキルマネージャー
-	private SkillManager m_SkillManager;
-	
-	
-	// キャラクター状態
-	private Phase<State> m_State = new Phase<State>();
-	// ギア加速クラス
-	private GearAccele m_GearAccle;
-	// 状態ロックフラグ
-	private bool m_StateLock;
-
-	// バトルクラス
-	private BattleBase m_Battle;
-
 	// ギア加速クラス
 	private class GearAccele{
-		private float GEAR_INTERVAL = 1.0f;
+		private float GEAR_INTERVAL = 5.0f;
 
 		// ギア状態
 		private enum Gear{
@@ -54,6 +26,27 @@ public class CharState : StateBase {
 		public GearAccele(CharBrain brain){
 			m_Brain = brain;
 
+			m_Gear.Change(Gear.FIRST);
+			m_Gear.Start();
+		}
+
+		public void GearInitialize(Vector3 accelVel){
+			m_AccelVel = accelVel;
+
+			float speed = accelVel.magnitude;
+			Gear gear = Gear.FIRST;
+			if (speed >= m_Brain.GetInfo().GEAR_THIRD_BASE){
+				gear = Gear.THIRD;
+			}
+			else if (speed >= m_Brain.GetInfo().GEAR_SECOND_BASE){
+				gear = Gear.SECOND;
+			}
+
+			m_Gear.Change(gear);
+		}
+
+		public void GearFinalize(){
+			m_AccelVel = Vector3.zero;
 			m_Gear.Change(Gear.FIRST);
 			m_Gear.Start();
 		}
@@ -103,7 +96,7 @@ public class CharState : StateBase {
 					allSpeed += (flickPowPer * m_Brain.GetInfo().GEAR_FIRST_ACCELE);
 					float maxSpeed = m_Brain.GetInfo().GEAR_SECOND_BASE;
 					// ギアアップ
-					if (allSpeed >= maxSpeed && m_Gear.phaseTime >= GEAR_INTERVAL){
+					if (allSpeed >= maxSpeed){
 						m_Gear.Change(Gear.SECOND);
 						m_Gear.Start();
 					}
@@ -116,21 +109,17 @@ public class CharState : StateBase {
 					allSpeed += (flickPowPer * m_Brain.GetInfo().GEAR_SECOND_ACCELE);
 					float maxSpeed = m_Brain.GetInfo().GEAR_THIRD_BASE;
 					float minSpeed = m_Brain.GetInfo().GEAR_SECOND_BASE;
-					// ギア変化可能
-					if (m_Gear.phaseTime >= GEAR_INTERVAL){
-						// ギアアップ
-						if (allSpeed >= maxSpeed){
-							m_Gear.Change(Gear.THIRD);
-							m_Gear.Start();
-						}
-						// ギアダウン
-						else if (allSpeed < minSpeed){
-							m_Gear.Change(Gear.FIRST);
-							m_Gear.Start();
-						}
-						// 速度制限
-						allSpeed = Mathf.Min(allSpeed, maxSpeed);
+					// ギアアップ
+					if (allSpeed >= maxSpeed){
+						m_Gear.Change(Gear.THIRD);
+						m_Gear.Start();
 					}
+					else if (m_Gear.phaseTime >= GEAR_INTERVAL && allSpeed < minSpeed){
+						m_Gear.Change(Gear.FIRST);
+						m_Gear.Start();
+					}
+					// 速度制限
+					allSpeed = Mathf.Min(allSpeed, maxSpeed);
 				}
 				break;
 				// ギア3
@@ -169,9 +158,67 @@ public class CharState : StateBase {
 			m_AccelVel = front * allSpeed;
 		}
 	}
+	// ダウンクラス
+	private class Down{
+		private float DOWN_TIME = 2.0f;
+
+		private float m_Timer = 0.0f;
+		private CharBrain m_Brain;
+
+		public Down(CharBrain brain){
+			m_Brain = brain;
+		}
+
+		public void DownUpdate(){
+			m_Timer += Time.deltaTime;
+
+			Vector3 front = -m_Brain.transform.forward * 20.0f;
+			m_Brain.SetInputVelocity(front);
+			m_Brain.SetInputFront(m_Brain.transform.forward);
+
+			if (m_Timer >= DOWN_TIME){
+				m_Brain.GetState().UnLock();
+				m_Brain.SetNextState(CharState.State.STOP, false);
+				m_Brain.SetHP(m_Brain.GetInfo().MAX_HP);
+				m_Timer = 0.0f;
+			}
+		}
+	}
+
+	// 状態
+	public enum State{
+		STOP,			// 立ち止まり
+		DRAG_MOVE,		// ドラッグ移動
+		FLICK_MOVE,		// フリック移動
+		BATTLE,			// バトル
+		DOWN,			// ダウン
+		NONE,
+	}
+
+	//  頭脳コンポーネント参照
+	[SerializeField] protected CharBrain m_Brain;
+	// アニメーションマネージャー
+	[SerializeField] protected AnimationManager m_AnmMgr;
+	// スキルマネージャー
+	private SkillDataManagerBase m_SkillDataManager;
+	
+	// キャラクター状態
+	private Phase<State> m_State = new Phase<State>();
+	// 状態ロックフラグ
+	private bool m_StateLock;
+	// 状態変更時終了処理
+	private System.Action m_StateFinalize;
+
+	// バトルクラス
+	private BattleBase m_Battle;
+	// ギア加速クラス
+	private GearAccele m_GearAccle;
+	// ダウンクラス
+	private Down m_Down;
+
 
 	public void Awake(){
-		m_SkillManager = new SkillManager();
+		m_SkillDataManager = new DeckManager();
 	}
 
 	// 初期化
@@ -179,6 +226,7 @@ public class CharState : StateBase {
 		StateChange(State.STOP);
 		m_StateLock = false;
 		m_GearAccle = new GearAccele(m_Brain);
+		m_Down = new Down(m_Brain);
 
 		m_Battle = new SkillBattle(m_Brain.GetCore().m_BattleManager, m_Brain);
 		m_Battle.BattleIni();
@@ -192,6 +240,7 @@ public class CharState : StateBase {
 			// 立ち止まり
 			case State.STOP:{
 				if (m_State.IsFirst()){
+					m_Brain.SetInputVelocity(Vector3.zero);
 					m_AnmMgr.ChangeAnimationLoopInFixedTime("Idle");
 				}
 			}
@@ -204,21 +253,37 @@ public class CharState : StateBase {
 			case State.FLICK_MOVE:{
 				if (m_State.IsFirst()){
 					m_AnmMgr.ChangeAnimationLoopInFixedTime("Run");
+					m_GearAccle.GearInitialize(m_Brain.GetInfo().m_CurrentVelocity);
+					m_StateFinalize = () =>{ m_GearAccle.GearFinalize(); };
 				}
 
 				m_GearAccle.FlickMoveUpdate();
 
 				if(m_GearAccle.GetAcceleVel().magnitude <= Vector3.kEpsilon){
 					m_Brain.SetNextState(State.STOP, false);
+					m_Brain.SetInputVelocity(Vector3.zero);
 					return;
 				}
 
 				m_Brain.SetInputVelocity(m_GearAccle.GetAcceleVel());
 			}
 			break;
-			// バトルモード
+			// バトル
 			case State.BATTLE:{
+				if (m_State.IsFirst()){
+					m_StateFinalize = () => { ((DeckManager)m_SkillDataManager).DeckReset(); };
+				}
+
 				m_Battle.BattleUpdate();
+			}
+			break;
+			// ダウン
+			case State.DOWN:{
+				if (m_State.IsFirst()){
+					m_AnmMgr.ChangeAnimationInFixedTime("Damage_Down");
+				}
+
+				m_Down.DownUpdate();
 			}
 			break;
 		}
@@ -237,6 +302,10 @@ public class CharState : StateBase {
 			return;
 		}
 		
+		if (m_StateFinalize != null){
+			m_StateFinalize();
+			m_StateFinalize = null;
+		}
 		m_State.Change(state);
 		m_State.Start();
 	}
@@ -266,8 +335,8 @@ public class CharState : StateBase {
 	}
 
 	// スキルマネージャー取得
-	public SkillManager GetSkillManager(){
-		return m_SkillManager;
+	public SkillDataManagerBase GetSkillDataManager(){
+		return m_SkillDataManager;
 	}
 
 	// バトルクラスを取得

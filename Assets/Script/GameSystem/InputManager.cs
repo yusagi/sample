@@ -7,6 +7,7 @@ public class InputManager : SingletonBefaviour<InputManager>
     {
         TouchDown,
         TouchUp,
+        Touch,
         Frick,
         Drag,
         None,
@@ -200,10 +201,14 @@ public class InputManager : SingletonBefaviour<InputManager>
             }
         }
 
-        // ドラッグ
-        if (GetDragVelocity().magnitude > UtilityMath.epsilon)
-        {
-            return TouchType.Drag;
+        if (instance.isDrag){
+            if (GetDragVelocity().magnitude > UtilityMath.epsilon)
+            {
+                return TouchType.Drag;
+            }
+            else{
+                return TouchType.Touch;
+            }
         }
 
         return TouchType.None;

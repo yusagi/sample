@@ -9,8 +9,8 @@ public class CharBrain : BaseBrain {
 
 	protected Vector3 m_InputVelocity;
 	protected float m_InputSpeed;
-	protected Quaternion m_InpuRotate;
-	protected int m_HP;
+	protected Vector3 m_InputFront;
+	protected int m_Damage;
 	protected Transform m_LookBase;
 	protected CharState.State m_NextState;
 
@@ -19,7 +19,7 @@ public class CharBrain : BaseBrain {
 	[SerializeField] protected CharInfo m_Info;
 
 	private bool m_IsMove;
-	private bool m_IsRotate;
+	private bool m_IsFront;
 	private bool m_IsChangeSpeed;
 	private bool m_IsChangeState;
 	private bool m_IsLock;
@@ -33,12 +33,12 @@ public class CharBrain : BaseBrain {
 
 	// 初期化
 	public override void BrainIni(){
-		m_HP = m_Info.START_HP;
-
 		m_IsMove = false;
-		m_IsRotate = false;
+		m_IsFront = false;
 		m_IsChangeSpeed = false;
 		m_IsChangeState = false;
+
+		m_Info.m_HP = m_Info.MAX_HP;
 	}
 	// 更新
 	public override void BrainUpdate(){
@@ -47,7 +47,7 @@ public class CharBrain : BaseBrain {
 
 	// キャラクター情報更新
 	public void InfoUpdate(){
-		m_Info.m_HP = m_HP;
+		m_Info.m_HP += GetHP();
 
 		// 移動情報更新
 		if (IsFlag(ref m_IsMove)){
@@ -60,11 +60,8 @@ public class CharBrain : BaseBrain {
 		}
 
 		// 回転情報更新
-		if (IsFlag(ref m_IsRotate)){
-			m_Info.m_CurrentRotate = GetInputRotate();
-		}
-		else{
-			m_Info.m_CurrentRotate = transform.rotation;
+		if (m_IsFront){
+			m_Info.m_CurrentFront = GetInputFront();
 		}
 	}
 
@@ -96,15 +93,15 @@ public class CharBrain : BaseBrain {
 	}
 
 	// 回転情報を設定
-	public void SetInputRotate(Quaternion rotate){
-		m_InpuRotate = rotate;
-		m_IsRotate = true;
+	public void SetInputFront(Vector3 front){
+		m_InputFront = front;
+		m_IsFront = true;
 	}
 
 	// 回転情報を取得
-	public Quaternion GetInputRotate(){
-		Quaternion tmp = m_InpuRotate;
-		m_InpuRotate = Quaternion.identity;
+	public Vector3 GetInputFront(){
+		Vector3 tmp = m_InputFront;
+		m_InputFront = Vector3.zero;
 		return tmp;
 	}
 
@@ -135,9 +132,16 @@ public class CharBrain : BaseBrain {
 		return tmp;
 	}
 
-	// HP情報を設定
-	public void SetHP(int hp){
-		m_HP = hp;
+	// ダメージ情報を設定
+	public void SetDamage(int damage){
+		m_Damage = damage;
+	}
+
+	// ダメージ情報取得
+	public int GetHP(){
+		int tmp = m_Damage;
+		m_Damage = 0;
+		return tmp;
 	}
 
 	// 移動基準視点を設定
@@ -166,13 +170,23 @@ public class CharBrain : BaseBrain {
 	}
 
 	// 座標と回転を設定
-	public void SetTransform(Quaternion rotation){
-		Transform planet = m_Core.m_PlanetManager.GetPlanet(m_Core.GetPlanetID()).transform;
-		m_Core.GetStand().Rotate(planet.position, planet.localScale.y * 0.5f, rotation, m_Core.GROUND_UP);
+	public void SetTransform(Quaternion rotation, Vector3 position){
+		transform.rotation = rotation;
+		transform.position = position;
+	}
+
+	// HPを設定
+	public void SetHP(int hp){
+		m_Info.m_HP = hp;
+	}
+
+	// 回転可能か？
+	public bool IsRotate(){
+		return IsFlag(ref m_IsFront);
 	}
 
 	// 渡されたフラグからtrue,falseの状態取得とフラグのリセット
-	public bool IsFlag(ref bool isFlag){
+	private bool IsFlag(ref bool isFlag){
 		if (isFlag){
 			isFlag = false;
 			return true;

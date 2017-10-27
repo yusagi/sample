@@ -26,6 +26,7 @@ public class AnimationManager : MonoBehaviour {
     private List<AnmData> m_AnmList = new List<AnmData>();		// 再生アニメーションリスト
     private System.Action<int> m_EndIntervention; // 終了時間変更の介入処理
     private string m_CurrentName;           // 現在のアニメーション名
+    private AnmData m_CurrentAnm;
 	
 	void Awake(){
 		m_Animator = GetComponent<Animator>();
@@ -35,7 +36,7 @@ public class AnimationManager : MonoBehaviour {
         m_EndIntervention = null;
 
         m_CurrentName = getName();
-        
+        m_CurrentAnm = new AnmData("Idle", 0, 0.0f, 0, 0, 0, 0);
     }
 
     // アニメーション変更(ループ)
@@ -51,6 +52,7 @@ public class AnimationManager : MonoBehaviour {
         ChangeAnimationLoopInFixedTime(name, data._layer, data._durationTime, data._offsetTime);
         
         m_CurrentName = name;
+        m_CurrentAnm = data;
     }
 
     // アニメーション変更(nextNameは再生時間の取得に使用)
@@ -154,6 +156,7 @@ public class AnimationManager : MonoBehaviour {
         AnmData data = m_AnmList[0];
 
         m_CurrentName = data._name;
+        m_CurrentAnm = data;
 
         // 変更
         m_Animator.CrossFadeInFixedTime(data._name, data._durationTime, data._layer, data._offsetTime);
@@ -174,6 +177,7 @@ public class AnimationManager : MonoBehaviour {
             yield return null;
         }
         m_EndIntervention = null;
+        yield return null;
 
         // アニメーションリストから再生したアニメーションを削除
         m_AnmList.Remove(data);
@@ -183,6 +187,7 @@ public class AnimationManager : MonoBehaviour {
         {
             // 終了
             m_AnmState = AnmState.END;
+
             m_PlayAnimation = null;
         }
         // アニメーションが入ってたら続けて再生
@@ -238,7 +243,7 @@ public class AnimationManager : MonoBehaviour {
 
     // 再生中のアニメーションデータを取得
     public AnmData GetPlayAnmData(){
-        return m_AnmList[0];
+        return m_CurrentAnm;
     }
 
 	// アニメーター取得

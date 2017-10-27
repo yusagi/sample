@@ -28,8 +28,10 @@ public class CharCore : BaseCore {
 		m_Brain.InfoUpdate();
 
 		Transform planet = m_PlanetManager.GetPlanet(GetPlanetID()).transform;
-		m_Stand.Rotate(planet.position, planet.localScale.y * 0.5f, m_Brain.GetInfo().m_CurrentRotate, GROUND_UP);
-		m_Move.Move(planet.position, planet.localScale.y * 0.5f, m_Brain.GetInfo().m_CurrentVelocity * Time.deltaTime, GROUND_UP);
+		m_Move.Move(planet.position, planet.localScale.y * 0.5f, m_Brain.GetInfo().m_CurrentVelocity * Time.deltaTime, GROUND_UP + m_Brain.GetInfo().m_Jamp);
+		if (m_Brain.IsRotate()){
+			m_Stand.Rotate(m_Brain.GetInfo().m_CurrentFront);
+		}
 	}
 
 	public CharBrain GetBrain(){

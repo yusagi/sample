@@ -13,7 +13,9 @@ public class GrgrStand : MonoBehaviour {
 		transform.position = hitInfo.point + (transform.up * up);
 	}
 
-	public void Rotate(Vector3 center, float radius, Quaternion rot, float up){
-		transform.rotation = rot;
+	public void Rotate(Vector3 forward){
+		Vector3 front = Vector3.ProjectOnPlane(forward, transform.up);
+
+		transform.rotation = Quaternion.LookRotation(front, transform.up);
 	}
 }

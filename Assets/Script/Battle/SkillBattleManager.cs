@@ -12,6 +12,9 @@ public enum SkillBattlePhase{
 }
 
 public class SkillBattleManager : MonoBehaviour{
+	// 最大手札枚数
+	public static int MAX_CHOICES = 4;
+
 	// ユーザー識別用
     public enum USER
     {
@@ -27,6 +30,13 @@ public class SkillBattleManager : MonoBehaviour{
         LOSE,
         DRAW,
     }
+
+	// バトル結果のタイプ
+	private enum RESULTE_TYPE{
+		NORMAL,
+		DOUBLE_WIN,
+		DOUBLE_LOSE,
+	}
 
     // キャラクターのデータ
     public class FighterData{
@@ -50,25 +60,23 @@ public class SkillBattleManager : MonoBehaviour{
 
     // リザルトデータクラス
 	public class ResultData{
-		public ResultData(SkillData skill, AnimationType anmType, RESULT result){
-			_skill = skill;
+		public ResultData(List<SkillCardUI> skillList, AnimationType anmType, RESULT result){
+			_skillList = skillList;
 			_anmType = anmType;
             _result = result;
 		}
 
-		public SkillData _skill;
+		public List<SkillCardUI> _skillList = new List<SkillCardUI>();
 		public AnimationType _anmType;
         public RESULT _result;
 	}
 	
-	// 現在のフェーズ
-	public int m_CurrentPhase;
     // UIフィールド
     public Transform m_PlayerUIField;
     public Transform m_TargetUIField;
     // UIオブジェクト
-    List<GameObject> m_PlayerCardsUI = new List<GameObject>();
-    List<GameObject> m_TargetCardsUI = new List<GameObject>();
+    List<SkillCardUI> m_PlayerCardsUI = new List<SkillCardUI>();
+    List<SkillCardUI> m_TargetCardsUI = new List<SkillCardUI>();
 
     // 削除予定リスト(fighter, uiObject)
     List<KeyValuePair<GameObject, GameObject>> m_DestorySchedule = new List<KeyValuePair<GameObject, GameObject>>();
@@ -83,12 +91,149 @@ public class SkillBattleManager : MonoBehaviour{
 			m_PlayerUIField.GetComponent<PlayerPointUI>().SetPlayerObject(player);
 	}
 
+	// プレイヤーUIフィールドのボタンを全てオフ
+	public void PlayerFieldButtonDisable(){
+		m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonDisable();
+	}
+	// プレイヤーUIフィールドのボタンを全てオン
+	public void PlayerFieldButtonEnable(){
+		m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonEnable();
+	}
+
     // スキルバトル初期化処理
 	public void BattleIni(GameObject player, GameObject target){
         m_Fighters[player] = new FighterData(USER.PLAYER);
         m_Fighters[target] = new FighterData(USER.TARGET);
 
-		m_CurrentPhase = (int)SkillBattlePhase.START;
+		PlayerFieldButtonEnable();
+	}
+
+    // カードオブジェクト追加
+	public void AddCardObject(GameObject fighter, int num){
+		FighterData fighterData = m_Fighters[fighter];
+
+        switch (fighterData._user)
+        {
+            case USER.PLAYER:
+                {
+					SetCardObject(fighter, m_PlayerUIField, m_PlayerCardsUI, num);
+					HandAlignment(m_PlayerUIField, m_PlayerCardsUI);
+					SetChase(m_PlayerCardsUI);
+                }
+                break;
+            case USER.TARGET:
+                {
+					SetCardObject(fighter, m_TargetUIField, m_TargetCardsUI, num);
+					HandAlignment(m_TargetUIField, m_TargetCardsUI);
+					SetChase(m_TargetCardsUI);
+                }
+                break;
+        }
+
+
+	}
+
+	// スキルカードUIの追加
+	private void SetCardObject(GameObject fighter, Transform uiField, List<SkillCardUI> cardsUI, int num){
+		if (num <= 0){
+			return;
+		}
+
+		int currentNum = cardsUI.Count;
+		// 手札制限
+		if (currentNum == MAX_CHOICES){
+			return;
+		}
+		
+		DeckManager deckMgr = (DeckManager)fighter.GetComponent<CharCore>().GetBrain().GetState().GetSkillDataManager();
+		SkillData card = deckMgr.GetSkillData(0);
+		// デッキ0
+		if (card == null){
+			return;
+		}
+		GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/UI/SkillBattle/SkillCard"));
+		instance.name = card._name;
+		instance.GetComponent<SkillCardUI>().AddCardData(card);
+
+		//instance.transform.SetParent(uiField.GetChild(currentNum), false);
+		cardsUI.Add(instance.GetComponent<SkillCardUI>());
+
+		num -= 1;
+		SetCardObject(fighter, uiField, cardsUI, num);
+	}
+
+	// カードUIオブジェクトリストの先頭から手札を左詰めにする
+	private void HandAlignment(Transform uiField, List<SkillCardUI> cardsUI){
+		int num = 0;
+		foreach(SkillCardUI cardObj in cardsUI){
+			if (num >= uiField.childCount){
+				return;
+			}
+			cardObj.transform.SetParent(uiField.GetChild(num), false);
+			num++;
+		}
+	}
+
+	// 手札内で追撃カードが揃ってる場合にSkillCardUIに追撃先を設定
+	private void SetChase(List<SkillCardUI> cardUIs){
+		// 選択された追撃カードを格納
+		List<SkillCardUI> selectedChase = new List<SkillCardUI>();
+		
+		// 一番左のベースを検索
+		foreach (SkillCardUI baseUI in cardUIs){
+			// ベースカードか？
+			if (baseUI.GetSkillData()._chaseType == ChaseType.BASE){
+				ArtsType baseArts = baseUI.GetSkillData()._artsType;
+				ChaseType next = (ChaseType)((int)ChaseType.BASE + 1);
+				setChase(baseUI, cardUIs, selectedChase, next, baseArts);
+			}
+		}
+	}
+	// 追撃設定のループ処理
+	private void setChase(SkillCardUI cardUI, List<SkillCardUI> cardUIs, List<SkillCardUI> selectedChase, ChaseType chaseType, ArtsType baseArts){
+		// 直前に発見した追撃カード
+		SkillCardUI prevChase = null;
+
+		// 1番左端のカードから検索してく
+		foreach(SkillCardUI chase in cardUIs){
+			// チェイスがつながるか？
+			if (chase.GetSkillData()._chaseType == chaseType){
+				// アーツが一致するか？
+				if (chase.GetSkillData()._artsType == baseArts){
+					// すでに追撃に設定されてるか確認
+					bool isSelected = false;
+					foreach(SkillCardUI selected in selectedChase){
+						if (selected == chase){
+							isSelected = true;
+							break;
+						}
+					}
+					// 設定済みなら次の追撃を検索
+					if (isSelected == true){
+						prevChase = chase;
+						continue;
+					}
+					// 選択済みに追加
+					selectedChase.Add(chase);
+
+					// 追撃に設定
+					cardUI.SetNextChase(chase);
+
+					// 次の追撃タイプを設定
+					int chaseTypeNum = (int)chaseType + 1;
+					ChaseType nextChase = (ChaseType)chaseTypeNum;
+					// 追撃タイプに最後でないか確認
+					if (nextChase != ChaseType.CHASE_END){
+						setChase(chase, cardUIs, selectedChase, nextChase, baseArts);
+					}
+					break;
+				}
+			}
+		}
+		// 追撃が設定されてないなら
+		if (cardUI.GetNextChase() == null){
+			cardUI.SetNextChase(prevChase);
+		}
 	}
 
     // スキル選択
@@ -96,50 +241,61 @@ public class SkillBattleManager : MonoBehaviour{
 
 		FighterData fighterData = m_Fighters[fighter];
 		SkillCardUI skillData = uiObj.GetComponent<SkillCardUI>();
-		// apが足りなかったら不dat発
-        int tmp = fighterData._ap - skillData.GetSkillData()._ap;
-		if (tmp < 0){
+
+		// apが足りなかったら不発
+        int tmpAP;
+		tmpAP = fighterData._ap - skillData.GetSkillData()._ap;
+		if (tmpAP < 0){
 			return;
         }
 		// ap消費
-		fighterData._ap = tmp;
+		fighterData._ap = tmpAP;
+		// カード選択リストに追加
+		addChoice(fighter, skillData);
 		
+		// 選択したカードが基点だったらコンボ追加
+		if (skillData.GetSkillData()._chaseType == ChaseType.BASE){
+			SkillCardUI nextData = skillData.GetNextChase();
+			while(nextData != null){
+				// apが足りなかったら終了
+				tmpAP = fighterData._ap - nextData.GetSkillData()._ap;
+				if (tmpAP < 0){
+					break;
+				}
+				fighterData._ap = tmpAP;
+				addChoice(fighter, nextData);
+				nextData = nextData.GetNextChase();
+			}
+		}
+		
+		// 選択されなかったポイントをフェードアウト
+		Transform uiField = uiObj.parent.parent;
+		foreach(Transform point in uiField){
+			bool isFaedOut = true;
+			foreach(SkillCardUI selectedCard in m_Fighters[fighter]._choices){
+				if (point == selectedCard.transform.parent){
+					isFaedOut = false;
+					break;
+				}
+			}
+			// スキルUIが入ってるか確認
+			if (point.childCount > 0 && isFaedOut){
+				SkillCardUI uiCard = point.GetComponentInChildren<SkillCardUI>();
+				UIFadeOut(uiCard);
+			}		
+		}
+    }
+
+	private void addChoice(GameObject fighter, SkillCardUI skillData){
 		// カード選択に追加
 		m_Fighters[fighter]._choices.Add(skillData);
 		// 削除予定に追加
-		AddDestorySchedule(fighter, uiObj.gameObject);
-		
-		// 選択されなかったポイントを非アクティブ
-		foreach(var point in uiObj.parent.parent){
-			Transform tmpPoint = point as Transform;
-			if (tmpPoint != uiObj.parent){
-				UIController uiCtrl = tmpPoint.GetComponentInChildren<UIController>();
-				if (uiCtrl != null){
-					uiCtrl.ChangeAnimation("IsFeadOut", true);
-				}
-			}
-		}
-    }
+		AddDestorySchedule(fighter, skillData.gameObject);
+	}
 	
     // スキルバトル処理
-	public void Battle(GameObject player, GameObject target){
-		FighterData playerData = m_Fighters[player];
-		FighterData targetData = m_Fighters[target];
-
-		int playerCount = playerData._choices.Count;
-		int targetCount = targetData._choices.Count;
-
-		// フェーズの進行
-		m_CurrentPhase = Mathf.Clamp(m_CurrentPhase + 1, (int)SkillBattlePhase.FIRST, (int)SkillBattlePhase.FOURTH);
-		// 選択スキル取得
-		SkillCardUI pData = (playerData._choices.Count > 0) ? playerData._choices[0] : null;
-		SkillCardUI tData = (targetData._choices.Count > 0) ? targetData._choices[0] : null;
-		SkillBattleResult(player, pData, target, tData);
-
-		string name1 = (pData == null) ? "NULL" : pData.GetSkillData()._name;
-		string name2 = (tData == null) ? "NULL" : tData.GetSkillData()._name;
-
-		Debug.Log(name1 + " vs " + name2);
+	public void Battle(GameObject player, GameObject target, SkillBattlePhase phase){
+		SkillBattleResult(player, target, phase);
     }
 
     // 選択カードリセット
@@ -165,34 +321,11 @@ public class SkillBattleManager : MonoBehaviour{
         m_ResultWinner.Clear();
 	}
 
-    // カードオブジェクト追加
-	public void AddCardObject(GameObject card, GameObject fighter){
-		FighterData fighterData = m_Fighters[fighter];
-
-        switch (fighterData._user)
-        {
-            case USER.PLAYER:
-                {
-                    int num = m_PlayerCardsUI.Count;
-                    card.transform.SetParent(m_PlayerUIField.GetChild(num), false);
-                    m_PlayerCardsUI.Add(card);
-                }
-                break;
-            case USER.TARGET:
-                {
-                    int num = m_TargetCardsUI.Count;
-                    card.transform.SetParent(m_TargetUIField.GetChild(num), false);
-                    m_TargetCardsUI.Add(card);
-                }
-                break;
-        }
-	}
-
     // カードオブジェクト消去
     private void CutCardObject(GameObject fighter, GameObject uiObject)
     {
         Transform root;
-        List<GameObject> uis;
+        List<SkillCardUI> uis;
 		USER user = m_Fighters[fighter]._user;
         switch(user){
             case USER.PLAYER:{
@@ -207,31 +340,13 @@ public class SkillBattleManager : MonoBehaviour{
             break;
             default:{
                 root = null;
-                uis = new List<GameObject>();
+                uis = new List<SkillCardUI>();
             }
             break;
         }
 
-        // 削除オブジェクトのPOINT兄弟番号取得
-        int siblinNum = uiObject.transform.parent.GetSiblingIndex();
-
-        // カードの親子関係の変更
-        foreach (Transform siblin in root)
-        {
-            if (siblin.GetSiblingIndex() > siblinNum)
-            {
-                // 子を取り出す
-                if (siblin.childCount > 0)
-                {
-                    Transform tmpCard = siblin.GetChild(0);
-
-                    tmpCard.SetParent(root.GetChild(siblin.GetSiblingIndex() - 1), false);
-                }
-            }
-        }
-
         // オブジェクト削除
-        uis.Remove(uiObject);
+        uis.Remove(uiObject.GetComponent<SkillCardUI>());
         GameObject.Destroy(uiObject);
     }
 
@@ -259,7 +374,7 @@ public class SkillBattleManager : MonoBehaviour{
     }
 
     // カードオブジェクトリスト取得
-    public List<GameObject> GetCardList(GameObject fighter)
+    public List<SkillCardUI> GetCardList(GameObject fighter)
     {
 		USER user = m_Fighters[fighter]._user;
 
@@ -278,9 +393,9 @@ public class SkillBattleManager : MonoBehaviour{
 		return m_Fighters[fighter]._results[phase];
     }
 
-	// 選択したカード取得
-	public SkillCardUI GetChoice(GameObject fighter){
-		return m_Fighters[fighter]._choices[0];
+	// 選択したカードリスト取得
+	public List<SkillCardUI> GetChoices(GameObject fighter){
+		return m_Fighters[fighter]._choices;
 	}
 
 	// fighterの選んだ枚数
@@ -293,216 +408,282 @@ public class SkillBattleManager : MonoBehaviour{
 		m_Fighters[fighter]._ap = ap;
 	}
 
+    // アクションバトルごとの結果を格納
+	void SkillBattleResult(GameObject player, GameObject target, SkillBattlePhase phase){
+		FighterData pFighter = m_Fighters[player];
+		FighterData tFighter = m_Fighters[target];
+		
+		// プレイヤーと相手の初手のスキル
+		SkillCardUI pFirstSkill = null;
+		if (pFighter._choices.Count > 0){
+			pFirstSkill = pFighter._choices[0];
+		}
+		SkillCardUI tFirstSkill = null;
+		if (tFighter._choices.Count > 0){
+			tFirstSkill = tFighter._choices[0];
+		}
+
+		// プレイヤーか相手のスキルが未選択
+		if (pFirstSkill == null || tFirstSkill == null){
+			// 相手データあり
+			if (tFirstSkill != null){
+				AnimationType pAnmType = AnimationType.NONE;
+				switch (tFirstSkill.GetSkillData()._actionType)
+				{
+					// グー, チョキ, パー
+					case ActionType.RED:
+					case ActionType.GREEN:
+					case ActionType.BLUE:{
+						tFighter._results[phase] = new ResultData(tFighter._choices, AnimationType.ATTACK, RESULT.WIN);
+						foreach(SkillCardUI ui in tFighter._choices){
+							UIWin(ui);
+						}
+
+						pAnmType = AnimationType.DAMAGE;
+
+						m_ResultWinner[phase] = target;
+					}
+					break;
+					// ガード
+					case ActionType.GUARD:{
+						tFighter._results[phase] = new ResultData(tFighter._choices, AnimationType.GUARD, RESULT.WIN);
+						foreach(SkillCardUI ui in tFighter._choices){
+							UIWin(ui);
+						}
+
+						m_ResultWinner[phase] = target;
+					}
+					break;
+				}
+
+				pFighter._results[phase] = new ResultData(null, pAnmType, RESULT.LOSE);
+				return;
+			}
+			// プレイヤーデータ有り
+			if (pFirstSkill != null){
+				AnimationType tAnmType = AnimationType.NONE;
+				switch (pFirstSkill.GetSkillData()._actionType)
+				{
+					// グー, チョキ, パー, ガード
+					case ActionType.RED:
+					case ActionType.GREEN:
+					case ActionType.BLUE:{
+						pFighter._results[phase] = new ResultData(pFighter._choices, AnimationType.ATTACK, RESULT.WIN);
+						foreach (SkillCardUI ui in pFighter._choices){
+							UIWin(ui);
+						}
+
+						tAnmType = AnimationType.DAMAGE;
+
+						m_ResultWinner[phase] = player;
+					}
+					break;
+					case ActionType.GUARD:{
+							pFighter._results[phase] = new ResultData(pFighter._choices, AnimationType.GUARD, RESULT.WIN);
+							foreach (SkillCardUI ui in pFighter._choices){
+								UIWin(ui);
+							}
+
+							m_ResultWinner[phase] = player;
+					}
+					break;
+				}
+				
+				tFighter._results[phase] = new ResultData(null, tAnmType, RESULT.LOSE);
+				return;
+			}
+
+			pFighter._results[phase] = new ResultData(null, AnimationType.NONE, RESULT.LOSE);
+			tFighter._results[phase] = new ResultData(null, AnimationType.NONE, RESULT.LOSE);
+			m_ResultWinner[phase] = player;
+
+			return;
+		}
+
+        // 両キャラクターとも選択
+		switch(pFirstSkill.GetSkillData()._actionType){
+            // グー
+            case ActionType.RED:{
+				switch(tFirstSkill.GetSkillData()._actionType){
+					// グー
+					case ActionType.RED:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.DOUBLE_WIN, phase);
+					}
+					break;
+					// チョキ
+					case ActionType.GREEN:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// パー
+                    case ActionType.BLUE:
+                    {
+						SetBattleResult(target, tFighter._choices, AnimationType.ATTACK,
+										player, pFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+                    }
+                    break;
+					// 防御
+					case ActionType.GUARD:{
+						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
+										player, pFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+				}
+			}
+			break;
+			// チョキ
+			case ActionType.GREEN:{
+				switch(tFirstSkill.GetSkillData()._actionType){
+					// グー
+					case ActionType.RED:{
+						SetBattleResult(target, tFighter._choices, AnimationType.ATTACK,
+										player, pFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// チョキ
+					case ActionType.GREEN:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.DOUBLE_WIN, phase);
+					}
+					break;
+					// パー
+					case ActionType.BLUE:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// 防御
+					case ActionType.GUARD:{
+						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
+										player, pFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+				}
+			}
+			break;
+			// パー
+			case ActionType.BLUE:{
+				switch(tFirstSkill.GetSkillData()._actionType){
+					// グー
+					case ActionType.RED:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// チョキ
+					case ActionType.GREEN:{
+						SetBattleResult(target, tFighter._choices, AnimationType.ATTACK,
+										player, pFighter._choices, AnimationType.DAMAGE,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// パー
+					case ActionType.BLUE:{
+						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
+										target, tFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.DOUBLE_WIN, phase);
+					}
+					break;
+					// 防御
+					case ActionType.GUARD:{
+						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
+										player, pFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+				}
+			}
+			break;
+			// ガード
+			case ActionType.GUARD:{
+				switch(tFirstSkill.GetSkillData()._actionType){
+					// グー, チョキ, パー
+					case ActionType.RED:
+					case ActionType.GREEN:
+					case ActionType.BLUE:{
+						SetBattleResult(player, pFighter._choices, AnimationType.GUARD,
+										target, tFighter._choices, AnimationType.ATTACK,
+										RESULTE_TYPE.NORMAL, phase);
+					}
+					break;
+					// 防御
+					case ActionType.GUARD:{
+						SetBattleResult(player, pFighter._choices, AnimationType.GUARD,
+										target, tFighter._choices, AnimationType.GUARD,
+										RESULTE_TYPE.DOUBLE_LOSE, phase);
+					}
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	private void SetBattleResult(GameObject fighterObj1, List<SkillCardUI> fighter1Data, AnimationType fighter1AnimationType,  
+								 GameObject fighterObj2, List<SkillCardUI> fighter2Data, AnimationType fighter2AnimationType,
+								 RESULTE_TYPE resulteType, SkillBattlePhase phase){
+		
+		FighterData fighter1 = m_Fighters[fighterObj1];
+		FighterData fighter2 = m_Fighters[fighterObj2];
+
+		switch(resulteType){
+			// 勝者と敗者がでた(fighterObj1が勝者)
+			case RESULTE_TYPE.NORMAL:{
+				fighter1._results[phase] = new ResultData(fighter1Data, fighter1AnimationType, RESULT.WIN);
+				fighter2._results[phase] = new ResultData(fighter2Data, fighter2AnimationType, RESULT.LOSE);
+
+				foreach(SkillCardUI ui in fighter1Data){
+					UIWin(ui);
+				}
+
+				m_ResultWinner[phase] = fighterObj1;
+			}
+			break;
+			// 引き分け
+			case RESULTE_TYPE.DOUBLE_WIN:{
+				fighter1._results[phase] = new ResultData(fighter1Data, fighter1AnimationType, RESULT.DRAW);
+				fighter2._results[phase] = new ResultData(fighter2Data, fighter2AnimationType, RESULT.DRAW);
+
+				foreach(SkillCardUI ui in fighter1Data){
+					UIWin(ui);
+				}
+				foreach(SkillCardUI ui in fighter2Data){
+					UIWin(ui);
+				}
+
+				m_ResultWinner[phase] = fighterObj1;
+			}
+			break;
+			// 両方敗者
+			case RESULTE_TYPE.DOUBLE_LOSE:{
+				fighter1._results[phase] = new ResultData(fighter1Data, fighter1AnimationType, RESULT.LOSE);
+				fighter2._results[phase] = new ResultData(fighter2Data, fighter2AnimationType, RESULT.LOSE);
+
+				m_ResultWinner[phase] = fighterObj1;
+
+			}
+			break;
+		}
+	}
+
 	// UIフェードアウト
 	public void UIFadeOut(SkillCardUI card){
 		card.GetComponentInChildren<Animator>().Play("FeadOut");
 	}
 
-
-    // アクションバトルごとの結果を格納
-	void SkillBattleResult(GameObject player, SkillCardUI pData, GameObject target, SkillCardUI tData){
-		FighterData pFighter = m_Fighters[player];
-		FighterData tFighter = m_Fighters[target];
-		SkillBattlePhase phase = (SkillBattlePhase)m_CurrentPhase;
-        // プレイヤー未選択
-		if (pData == null){
-            // アニメーションなし
-			pFighter._results[(SkillBattlePhase)m_CurrentPhase] = new ResultData(pData.GetSkillData(), AnimationType.NONE, RESULT.LOSE);
-            // 相手データあり
-			if (tData != null){
-                switch (tData.GetSkillData()._type)
-                {
-                    // 通常攻撃
-                    case ActionType.NORMAL_ATTACK:
-                        {
-							tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                            tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = target;
-                        }
-                        return;
-                    // 防御
-                    case ActionType.GUARD:
-                        {
-							tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.GUARD, RESULT.WIN);
-                            tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = target;
-                        }
-                        return;
-                    // 防御破壊攻撃
-                    case ActionType.GUARD_BREAK_ATTACK:
-                        {
-							tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                            tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = target;
-                        }
-                        return;
-				}
-			}
-		}
-        // 相手未選択
-		if (tData == null){
-            // アニメーションなし
-			tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.NONE, RESULT.LOSE);
-            // プレイヤーデータ有り
-			if (pData != null){
-                switch (pData.GetSkillData()._type)
-                {
-                    // 通常攻撃
-                    case ActionType.NORMAL_ATTACK:
-                        {
-							pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                            pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = player;
-                        }
-                        return;
-                    // 防御
-                    case ActionType.GUARD:
-                        {
-							pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.GUARD, RESULT.WIN);
-                            pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = player;
-                        }
-                        return;
-                    // 防御破壊攻撃
-                    case ActionType.GUARD_BREAK_ATTACK:
-                        {
-							pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                            pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-							m_ResultWinner[phase] = player;
-                        }
-                        return;
-                }
-			}
-			return;
-		}
-
-        // 両キャラクターとも選択
-		switch(pData.GetSkillData()._type){
-            // プレイヤー通常攻撃
-            case ActionType.NORMAL_ATTACK:{
-				switch(tData.GetSkillData()._type){
-					// エネミー通常攻撃
-					case ActionType.NORMAL_ATTACK:{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN); 
-                        pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-						
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                        tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						m_ResultWinner[phase] = player;
-					}
-					break;
-					// エネミー防御
-					case ActionType.GUARD:{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.LOSE);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.GUARD, RESULT.WIN);
-                        tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						m_ResultWinner[phase] = target;
-					}
-					break;
-                    // エネミー防御破壊攻撃
-                    case ActionType.GUARD_BREAK_ATTACK:
-                    {
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-                        pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.DAMAGE, RESULT.LOSE);
-
-						m_ResultWinner[phase] = player;
-                    }
-                    break;
-				}
-			}
-			break;
-			// プレイヤー防御
-			case ActionType.GUARD:{
-				switch (tData.GetSkillData()._type)
-				{
-					// エネミー通常攻撃
-					case ActionType.NORMAL_ATTACK:
-					{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.GUARD, RESULT.WIN); 
-						pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-						
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.LOSE);
-
-						m_ResultWinner[phase] = player;
-					}
-					break;
-					// エネミー防御
-					case ActionType.GUARD:
-					{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.GUARD, RESULT.LOSE);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.GUARD, RESULT.LOSE);
-
-						m_ResultWinner[phase] = player;
-					}
-					break;
-					// エネミー防御破壊攻撃
-					case ActionType.GUARD_BREAK_ATTACK:
-					{
-						tFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.DAMAGE, RESULT.LOSE); 
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-						tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						m_ResultWinner[phase] = target;
-					}
-					break;
-				}
-			}
-			break;
-            // プレイヤー防御破壊攻撃
-            case ActionType.GUARD_BREAK_ATTACK:
-			{
-				switch (tData.GetSkillData()._type)
-				{
-					// エネミー通常攻撃
-					case ActionType.NORMAL_ATTACK:
-					{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.DAMAGE, RESULT.LOSE);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-						tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						m_ResultWinner[phase] = target;
-					}
-					break;
-					// エネミー防御
-					case ActionType.GUARD:
-					{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-						pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.DAMAGE, RESULT.LOSE);
-
-						m_ResultWinner[phase] = player;
-					}
-					break;
-					// エネミー防御破壊攻撃
-					case ActionType.GUARD_BREAK_ATTACK:
-					{
-						pFighter._results[phase] = new ResultData(pData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-						pData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						tFighter._results[phase] = new ResultData(tData.GetSkillData(), AnimationType.ATTACK, RESULT.WIN);
-						tData.GetComponentInChildren<UIController>().ChangeAnimation("IsWin", true);
-
-						m_ResultWinner[phase] = player;
-					}
-					break;
-				}
-			}
-			break;
-		}
+	// UI勝利アニメーション
+	public void UIWin(SkillCardUI card){
+		card.GetComponentInChildren<Animator>().Play("LightStart");
 	}
 }
