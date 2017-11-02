@@ -146,7 +146,6 @@ public class SkillBattle : BattleBase{
 
 		SkillBattleManager skillBattleManager = m_BattleManager.GetSkillBattleManager();
 		SkillBattlePhase phase = m_BattleManager.m_ResultPhase.current;
-
 		SkillBattleManager.ResultData resultData = skillBattleManager.GetResultData(m_Brain.gameObject, phase);
 
 		// カードを墓地へ送る
@@ -202,45 +201,34 @@ public class SkillBattle : BattleBase{
 							damage += anmName.GetSkillData()._attack;
 						}
 					}
-					// 次のアニメーションネーム
-					string nextName = null;
-					if (chainAnm.Count > 0){
-						nextName = chainAnm[0];
-						chainAnm.RemoveAt(0);
-					}
-
+					
 					// 初動アニメーション
-					m_Brain.GetState().GetAnmMgr().ChangeAnimationInFixedTime(firstAnmName, nextName);
+					m_Brain.GetState().GetAnmMgr().ChangeAnimationInFixedTime(firstAnmName);
 
 					// チェインアニメーション
 					foreach(string anmName in chainAnm){
-						firstAnmName = nextName;
-						nextName = anmName;
-
-						m_Brain.GetState().GetAnmMgr().ChainAnimation(firstAnmName, nextName);
-					}
-
-					// 最後のチェインアニメーション
-					if (nextName != null){
-						m_Brain.GetState().GetAnmMgr().ChainAnimation(nextName);
+						m_Brain.GetState().GetAnmMgr().ChainAnimation(anmName);
 					}
                 }
                 break;
             // 防御
             case AnimationType.GUARD:
                 {
+					int endFrame = 0;
 					float slowEndFrame = 0;
 					float slowStartFrame = 0;
 					int recovery = 0;
                     // ガードの時は相手のタイミングを参照してアニメーションを再生する
-					if (skillBattleManager.GetResultData(target.gameObject, phase)._skillList != null){
+					if (skillBattleManager.GetResultData(target.gameObject, phase)._skillList.Count > 0){
                     	SkillData skillData = skillBattleManager.GetResultData(target.gameObject, phase)._skillList[0].GetSkillData();
-						AnmData anmData = m_Brain.GetState().GetAnmMgr().GetAnmData(skillData._anmName, "Common");
+						AnmData anmData = target.GetState().GetAnmMgr().GetPlayAnmData();
+						endFrame = anmData._endFrame;
 						slowEndFrame = anmData._slowEndFrame;
 						slowStartFrame = anmData._slowStartFrame;
 						recovery = skillData._attack;
 					}
-                    m_Brain.GetState().GetAnmMgr().ChangeAnmDataInFixedTime("Guard", -1, -1, -1, slowEndFrame, slowStartFrame);
+					AnmData playAnm = m_Brain.GetState().GetAnmMgr().GetTransData("Guard");
+                    m_Brain.GetState().GetAnmMgr().ChangeAnimationInFixedTime(new AnmData("Guard", 0, playAnm._durationTime, playAnm._offsetTime, endFrame, slowEndFrame, slowStartFrame));
 
                     m_Brain.SetDamage(recovery);
                 }

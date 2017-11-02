@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour {
     public SkillBattleManager m_SkillBattleManager;
 
     public CurrentSpeed m_CurrentSpeed;
-
+    
     private void Awake(){
         // フレームレート設定
         Application.targetFrameRate = 30;
@@ -27,7 +27,7 @@ public class GameManager : MonoBehaviour {
         CharCore playerCore = player.GetComponent<CharCore>();
 
         // 敵生成
-        GameObject enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor/Enemy"));
+        GameObject enemy = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Charactor/Iris1"));
         CharCore enemyCore = enemy.GetComponent<CharCore>();
 
         // バトルマネージャー生成

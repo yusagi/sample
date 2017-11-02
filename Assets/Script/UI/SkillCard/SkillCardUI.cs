@@ -5,12 +5,22 @@ using UnityEngine.UI;
 
 public class SkillCardUI : MonoBehaviour {
 
+    public enum POINT{
+        UP = 0,
+        RIGHT = 1,
+        DOWN = 2,
+        LEFT = 3
+    }
+
 	public Image m_Image;
     public Text m_Text;
+    public Image m_ChainBase;
+    public Image m_Chain;
+    public CanvasGroup m_CanvasGroup;
 	private bool m_IsChoice = false;
 	private SkillData m_Data{get;set;}
     private SkillCardUI m_NextChase = null;
-
+    
 	void Awake(){
 	}
 
@@ -21,7 +31,6 @@ public class SkillCardUI : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
 	}
 
     // スキルデータ取得
@@ -61,5 +70,19 @@ public class SkillCardUI : MonoBehaviour {
     // 次のコンボ先を取得
     public SkillCardUI GetNextChase(){
         return m_NextChase;
+    }
+
+    public void ForwardMove(Vector3 velocity){
+        StartCoroutine(move(0.5f, transform.position, transform.position + velocity * GetComponent<RectTransform>().sizeDelta.y, true));
+    }
+
+    private IEnumerator move(float time, Vector3 start, Vector3 end, bool isUnScale){
+        IEnumerator<Vector3> moving = UtilityMath.VLerp(start, end, time, EaseType.LINEAR, 1, isUnScale);
+
+        while(moving.MoveNext()){
+            transform.position = moving.Current;
+
+            yield return null;
+        }
     }
 }

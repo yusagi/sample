@@ -29,6 +29,11 @@ public class UIController : MonoBehaviour {
         m_Animator.SetBool(name, flg);
     }
 
+    // アニメーション切り替え
+    public void Play(string name){
+        m_Animator.Play(name);
+    }
+
     //Colorの切り替え
     public void ChangeImageColor(Color color) {
         m_Image.color = color;

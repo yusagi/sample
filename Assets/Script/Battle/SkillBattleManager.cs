@@ -34,7 +34,7 @@ public class SkillBattleManager : MonoBehaviour{
 	// バトル結果のタイプ
 	private enum RESULTE_TYPE{
 		NORMAL,
-		DOUBLE_WIN,
+		DRAW,
 		DOUBLE_LOSE,
 	}
 
@@ -77,6 +77,8 @@ public class SkillBattleManager : MonoBehaviour{
     // UIオブジェクト
     List<SkillCardUI> m_PlayerCardsUI = new List<SkillCardUI>();
     List<SkillCardUI> m_TargetCardsUI = new List<SkillCardUI>();
+	// 鎖表示エリア
+	public ChainField m_ChainField;
 
     // 削除予定リスト(fighter, uiObject)
     List<KeyValuePair<GameObject, GameObject>> m_DestorySchedule = new List<KeyValuePair<GameObject, GameObject>>();
@@ -91,21 +93,46 @@ public class SkillBattleManager : MonoBehaviour{
 			m_PlayerUIField.GetComponent<PlayerPointUI>().SetPlayerObject(player);
 	}
 
-	// プレイヤーUIフィールドのボタンを全てオフ
-	public void PlayerFieldButtonDisable(){
-		m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonDisable();
+	// // プレイヤーUIフィールドのボタンを全てオフ
+	// public void PlayerFieldButtonDisable(){
+	// 	m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonDisable();
+	// }
+	// // プレイヤーUIフィールドのボタンを全てオン
+	// public void PlayerFieldButtonEnable(){
+	// 	m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonEnable();
+	// }
+
+	// プレイヤーUIフィールドのカード選択オン
+	public void PlayerFieldSelectEnable(){
+		m_PlayerUIField.GetComponent<PlayerPointUI>().SelectEnable();
 	}
-	// プレイヤーUIフィールドのボタンを全てオン
-	public void PlayerFieldButtonEnable(){
-		m_PlayerUIField.GetComponent<PlayerPointUI>().AllButtonEnable();
+	// プレイヤーUIフィールドのカード選択オフ
+	public void PlayerFieldSelectDisable(){
+		m_PlayerUIField.GetComponent<PlayerPointUI>().SelectDisable();
+	}
+
+	// 指定したUIフィールドの表示オン/オフ
+	public void UIFieldDisplayActive(USER user, bool active){
+		Transform uiField = null;
+		switch(user){
+			case USER.PLAYER: uiField = m_PlayerUIField; break;
+			case USER.TARGET: uiField = m_TargetUIField; break;
+		}
+
+		int alpha = 1;
+		if (active == false){
+			alpha = 0;
+		}
+		
+		foreach(Transform obj in uiField){
+			obj.GetComponent<CanvasGroup>().alpha = alpha;
+		}
 	}
 
     // スキルバトル初期化処理
 	public void BattleIni(GameObject player, GameObject target){
         m_Fighters[player] = new FighterData(USER.PLAYER);
         m_Fighters[target] = new FighterData(USER.TARGET);
-
-		PlayerFieldButtonEnable();
 	}
 
     // カードオブジェクト追加
@@ -116,16 +143,18 @@ public class SkillBattleManager : MonoBehaviour{
         {
             case USER.PLAYER:
                 {
-					SetCardObject(fighter, m_PlayerUIField, m_PlayerCardsUI, num);
-					HandAlignment(m_PlayerUIField, m_PlayerCardsUI);
+					SetCardObject(fighter, m_PlayerUIField, m_PlayerCardsUI, num, "Prefabs/UI/SkillBattle/SkillCrossCard");
+					HandRefresh(m_PlayerUIField, m_PlayerCardsUI);
 					SetChase(m_PlayerCardsUI);
+					ActiveChaseIcon(m_PlayerCardsUI);
                 }
                 break;
             case USER.TARGET:
                 {
-					SetCardObject(fighter, m_TargetUIField, m_TargetCardsUI, num);
-					HandAlignment(m_TargetUIField, m_TargetCardsUI);
+					SetCardObject(fighter, m_TargetUIField, m_TargetCardsUI, num, "Prefabs/UI/SkillBattle/SkillCard");
+					HandRefresh(m_TargetUIField, m_TargetCardsUI);
 					SetChase(m_TargetCardsUI);
+					ActiveChaseIcon(m_TargetCardsUI);
                 }
                 break;
         }
@@ -134,7 +163,7 @@ public class SkillBattleManager : MonoBehaviour{
 	}
 
 	// スキルカードUIの追加
-	private void SetCardObject(GameObject fighter, Transform uiField, List<SkillCardUI> cardsUI, int num){
+	private void SetCardObject(GameObject fighter, Transform uiField, List<SkillCardUI> cardsUI, int num, string prefabName){
 		if (num <= 0){
 			return;
 		}
@@ -151,7 +180,7 @@ public class SkillBattleManager : MonoBehaviour{
 		if (card == null){
 			return;
 		}
-		GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/UI/SkillBattle/SkillCard"));
+		GameObject instance = (GameObject)GameObject.Instantiate(Resources.Load(prefabName));
 		instance.name = card._name;
 		instance.GetComponent<SkillCardUI>().AddCardData(card);
 
@@ -159,17 +188,19 @@ public class SkillBattleManager : MonoBehaviour{
 		cardsUI.Add(instance.GetComponent<SkillCardUI>());
 
 		num -= 1;
-		SetCardObject(fighter, uiField, cardsUI, num);
+		SetCardObject(fighter, uiField, cardsUI, num, prefabName);
 	}
 
-	// カードUIオブジェクトリストの先頭から手札を左詰めにする
-	private void HandAlignment(Transform uiField, List<SkillCardUI> cardsUI){
+	// カードUIを積めて鎖アイコンをオフにする
+	private void HandRefresh(Transform uiField, List<SkillCardUI> cardsUI){
 		int num = 0;
 		foreach(SkillCardUI cardObj in cardsUI){
 			if (num >= uiField.childCount){
 				return;
 			}
 			cardObj.transform.SetParent(uiField.GetChild(num), false);
+			cardObj.m_ChainBase.gameObject.SetActive(false);
+			cardObj.m_Chain.gameObject.SetActive(false);
 			num++;
 		}
 	}
@@ -236,6 +267,23 @@ public class SkillBattleManager : MonoBehaviour{
 		}
 	}
 
+	// 追撃アイコン表示/非表示
+	private void ActiveChaseIcon(List<SkillCardUI> cardUIs){
+		foreach(SkillCardUI ui in cardUIs){
+			if (ui.GetSkillData()._chaseType == ChaseType.BASE){
+				if (ui.GetNextChase() != null){
+					ui.m_ChainBase.gameObject.SetActive(true);
+					ui.m_Chain.gameObject.SetActive(true);
+
+					for(SkillCardUI next = ui.GetNextChase(); next != null;){
+						next.m_Chain.gameObject.SetActive(true);
+						next = next.GetNextChase();
+					}
+				}
+			}
+		}
+	}
+
     // スキル選択
     public void AddChoice(GameObject fighter, Transform uiObj){
 
@@ -269,21 +317,21 @@ public class SkillBattleManager : MonoBehaviour{
 		}
 		
 		// 選択されなかったポイントをフェードアウト
-		Transform uiField = uiObj.parent.parent;
-		foreach(Transform point in uiField){
-			bool isFaedOut = true;
-			foreach(SkillCardUI selectedCard in m_Fighters[fighter]._choices){
-				if (point == selectedCard.transform.parent){
-					isFaedOut = false;
-					break;
-				}
-			}
-			// スキルUIが入ってるか確認
-			if (point.childCount > 0 && isFaedOut){
-				SkillCardUI uiCard = point.GetComponentInChildren<SkillCardUI>();
-				UIFadeOut(uiCard);
-			}		
-		}
+		// Transform uiField = uiObj.parent.parent;
+		// foreach(Transform point in uiField){
+		// 	bool isFaedOut = true;
+		// 	foreach(SkillCardUI selectedCard in m_Fighters[fighter]._choices){
+		// 		if (point == selectedCard.transform.parent){
+		// 			isFaedOut = false;
+		// 			break;
+		// 		}
+		// 	}
+		// 	// スキルUIが入ってるか確認
+		// 	if (point.childCount > 0 && isFaedOut){
+		// 		SkillCardUI uiCard = point.GetComponentInChildren<SkillCardUI>();
+		// 		UIFadeOut(uiCard);
+		// 	}		
+		// }
     }
 
 	private void addChoice(GameObject fighter, SkillCardUI skillData){
@@ -436,7 +484,7 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.BLUE:{
 						tFighter._results[phase] = new ResultData(tFighter._choices, AnimationType.ATTACK, RESULT.WIN);
 						foreach(SkillCardUI ui in tFighter._choices){
-							UIWin(ui);
+							UIWin(ui, USER.TARGET);
 						}
 
 						pAnmType = AnimationType.DAMAGE;
@@ -446,10 +494,7 @@ public class SkillBattleManager : MonoBehaviour{
 					break;
 					// ガード
 					case ActionType.GUARD:{
-						tFighter._results[phase] = new ResultData(tFighter._choices, AnimationType.GUARD, RESULT.WIN);
-						foreach(SkillCardUI ui in tFighter._choices){
-							UIWin(ui);
-						}
+						tFighter._results[phase] = new ResultData(tFighter._choices, AnimationType.GUARD, RESULT.DRAW);
 
 						m_ResultWinner[phase] = target;
 					}
@@ -464,13 +509,13 @@ public class SkillBattleManager : MonoBehaviour{
 				AnimationType tAnmType = AnimationType.NONE;
 				switch (pFirstSkill.GetSkillData()._actionType)
 				{
-					// グー, チョキ, パー, ガード
+					// グー, チョキ, パー
 					case ActionType.RED:
 					case ActionType.GREEN:
 					case ActionType.BLUE:{
 						pFighter._results[phase] = new ResultData(pFighter._choices, AnimationType.ATTACK, RESULT.WIN);
 						foreach (SkillCardUI ui in pFighter._choices){
-							UIWin(ui);
+							UIWin(ui, USER.PLAYER);
 						}
 
 						tAnmType = AnimationType.DAMAGE;
@@ -479,10 +524,7 @@ public class SkillBattleManager : MonoBehaviour{
 					}
 					break;
 					case ActionType.GUARD:{
-							pFighter._results[phase] = new ResultData(pFighter._choices, AnimationType.GUARD, RESULT.WIN);
-							foreach (SkillCardUI ui in pFighter._choices){
-								UIWin(ui);
-							}
+							pFighter._results[phase] = new ResultData(pFighter._choices, AnimationType.GUARD, RESULT.DRAW);
 
 							m_ResultWinner[phase] = player;
 					}
@@ -509,7 +551,7 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.RED:{
 						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
 										target, tFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.DOUBLE_WIN, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 					// チョキ
@@ -531,7 +573,7 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.GUARD:{
 						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
 										player, pFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.NORMAL, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 				}
@@ -551,7 +593,7 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.GREEN:{
 						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
 										target, tFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.DOUBLE_WIN, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 					// パー
@@ -565,7 +607,7 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.GUARD:{
 						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
 										player, pFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.NORMAL, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 				}
@@ -592,14 +634,14 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.BLUE:{
 						SetBattleResult(player, pFighter._choices, AnimationType.ATTACK,
 										target, tFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.DOUBLE_WIN, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 					// 防御
 					case ActionType.GUARD:{
 						SetBattleResult(target, tFighter._choices, AnimationType.GUARD,
 										player, pFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.NORMAL, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 				}
@@ -614,14 +656,14 @@ public class SkillBattleManager : MonoBehaviour{
 					case ActionType.BLUE:{
 						SetBattleResult(player, pFighter._choices, AnimationType.GUARD,
 										target, tFighter._choices, AnimationType.ATTACK,
-										RESULTE_TYPE.NORMAL, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 					// 防御
 					case ActionType.GUARD:{
 						SetBattleResult(player, pFighter._choices, AnimationType.GUARD,
 										target, tFighter._choices, AnimationType.GUARD,
-										RESULTE_TYPE.DOUBLE_LOSE, phase);
+										RESULTE_TYPE.DRAW, phase);
 					}
 					break;
 				}
@@ -644,23 +686,16 @@ public class SkillBattleManager : MonoBehaviour{
 				fighter2._results[phase] = new ResultData(fighter2Data, fighter2AnimationType, RESULT.LOSE);
 
 				foreach(SkillCardUI ui in fighter1Data){
-					UIWin(ui);
+					UIWin(ui, fighter1._user);
 				}
 
 				m_ResultWinner[phase] = fighterObj1;
 			}
 			break;
 			// 引き分け
-			case RESULTE_TYPE.DOUBLE_WIN:{
+			case RESULTE_TYPE.DRAW:{
 				fighter1._results[phase] = new ResultData(fighter1Data, fighter1AnimationType, RESULT.DRAW);
 				fighter2._results[phase] = new ResultData(fighter2Data, fighter2AnimationType, RESULT.DRAW);
-
-				foreach(SkillCardUI ui in fighter1Data){
-					UIWin(ui);
-				}
-				foreach(SkillCardUI ui in fighter2Data){
-					UIWin(ui);
-				}
 
 				m_ResultWinner[phase] = fighterObj1;
 			}
@@ -677,13 +712,90 @@ public class SkillBattleManager : MonoBehaviour{
 		}
 	}
 
+	// 選択されなかったUIフェードアウト
+	public void UnselectedFadeOut(GameObject player, GameObject target){
+		// プレイヤー
+		foreach(SkillCardUI fieldUI in m_PlayerCardsUI){
+			bool isFadeOut = true;
+			foreach(SkillCardUI selectedUI in m_Fighters[player]._choices){
+				if (fieldUI == selectedUI){
+					isFadeOut = false;
+				}
+			}
+			if (isFadeOut){
+					UIFadeOut(fieldUI);
+			}
+		}
+
+		// 相手
+		foreach(SkillCardUI fieldUI in m_TargetCardsUI){
+			bool isFadeOut = true;
+			foreach(SkillCardUI selectedUI in m_Fighters[target]._choices){
+				if (fieldUI == selectedUI){
+					isFadeOut = false;
+				}
+			}
+			if (isFadeOut){
+					UIFadeOut(fieldUI);
+			}
+		}
+	}
+
+	// 全UIを待機状態に
+	public void AllUIIdle(){
+		foreach(SkillCardUI ui in m_PlayerCardsUI){
+			UIIdle(ui);
+		}
+		foreach(SkillCardUI ui in m_TargetCardsUI){
+			UIIdle(ui);
+		}
+	}
+
+	// UIフィールド待機
+	public void UIFieldIdle(){
+		m_PlayerUIField.GetComponent<UIController>().Play("Idle");
+		m_TargetUIField.GetComponent<UIController>().Play("Idle");
+	}
+
+	// UIフィールドスライドイン
+	public void UIFieldSlideIn(){
+		m_PlayerUIField.GetComponent<UIController>().Play("FrameIn");
+		m_TargetUIField.GetComponent<UIController>().Play("FrameIn");
+	}
+
+	// UI待機
+	public void UIIdle(SkillCardUI card){
+		card.GetComponent<UIController>().Play("Idle");
+	}
+
 	// UIフェードアウト
 	public void UIFadeOut(SkillCardUI card){
-		card.GetComponentInChildren<Animator>().Play("FeadOut");
+		card.GetComponent<UIController>().Play("FadeOut");
 	}
 
 	// UI勝利アニメーション
-	public void UIWin(SkillCardUI card){
-		card.GetComponentInChildren<Animator>().Play("LightStart");
+	public void UIWin(SkillCardUI card, USER user){
+		card.GetComponent<UIController>().Play("Win");
+		
+		Vector3 velocity = Vector3.up;
+		if(user == USER.TARGET){
+			velocity = Vector3.down;
+		}
+
+		card.ForwardMove(velocity);
+	}
+
+	// 鎖UI生成
+	public void CreateChain(){
+		foreach(SkillCardUI ui in m_PlayerCardsUI){
+			if (ui.GetNextChase() != null){
+				m_ChainField.CreateChain(ui, ui.GetNextChase());
+			}
+		}
+	}
+
+	// 鎖UI消去
+	public void DestoryChain(){
+		m_ChainField.DestroyChain();
 	}
 }

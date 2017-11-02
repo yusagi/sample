@@ -57,15 +57,15 @@ public class BattleManager : MonoBehaviour
 	float m_DelayUiSlideInTimer;	// スキルUIが再びスライドインするまでの遅延タイマー
 
 	// スロー
-	public float SLOW_START1 = 0.3f;
-	public float SLOW_END1 = 0.01f;
-	public float SLOW_END2 = 0.3f;
-	public float SLOW_TIME1 = 1.0f;
-	public float SLOW_KEEP_TIME = 2.0f;
-	//public float SLOW_TIME2 = 0.5f;
+	public float FIRST_SLOW_START1 = 0.3f;
+	public float FIRST_SLOW_END1 = 0.005f;
+	public float FIRST_SLOW_TIME1 = 1.0f;
+	public float UI_SELECT_TIME = 2.0f;				// UI選択時間
+	public float WAIT_TIME = 0.0f;					// 通常再生までの待ち時間
 
 	// コルーチン
 	private Coroutine m_BattleSlow;
+	private Coroutine m_BattlePhaseProcess;
 	
 	// 各種定数
 	public float EXCLAMATION_TIME;			// びっくりマークの表示時間
@@ -76,7 +76,6 @@ public class BattleManager : MonoBehaviour
 	public float MORE_SLOW = 0.01f;					// よりスローの値
 	public float MORE_SLOW_TIME = 0.5f; 			// よりスローである時間
 	public float BATTLE_NORMAL_TIME = 0.8f;			// 通常再生時速度
-	public float UI_SELECT_TIME = 2.0f;				// UI選択時間
 	public float DELAY_UI_SLIDEIN_TIME = 0.6f; 		// スキルUIが再びスライドインするまでの遅延時間
 	public float UI_OUT_TIME = 0.2f;				// UIがはけるまでの時間
 
@@ -87,6 +86,10 @@ public class BattleManager : MonoBehaviour
 
 	// 接敵時スロー開始距離
 	private float m_PlayDistance;
+
+	// デバグ用
+	public bool dbg_TargetUIFiedlActive;
+	public bool dbg_TargetSelectUIActive;
 
 	#endregion
 
@@ -114,7 +117,7 @@ public class BattleManager : MonoBehaviour
 		m_MoreSlowTimer = 0.0f;
 		m_DelayUiSlideInTimer = 0.0f;
 	}
-
+	
 	// Update is called once per frame
 	void Update()
 	{
@@ -192,7 +195,7 @@ public class BattleManager : MonoBehaviour
 					if (m_Battle.IsFirst())
 					{
 						// スロー処理(初回なのでキープタイムがカード選択時間)
-						m_BattleSlow = StartCoroutine(BattleSlow(SLOW_START1, SLOW_END1, SLOW_TIME1, SLOW_KEEP_TIME, SLOW_END2, 0));
+						m_BattleSlow = StartCoroutine(BattleSlow(FIRST_SLOW_START1, FIRST_SLOW_END1, FIRST_SLOW_TIME1, UI_SELECT_TIME, FIRST_SLOW_START1, 0));
 #if UNITY_EDITOR
 						// ログ消去
 						Dbg.ClearConsole();
@@ -216,16 +219,26 @@ public class BattleManager : MonoBehaviour
 
 								// 敵カード生成
 								m_SkillBattleManager.AddCardObject(m_Target.gameObject, SkillBattleManager.MAX_CHOICES);
+
+								// スライドインアニメーション開始
+								m_SkillBattleManager.UIFieldSlideIn();
+								m_SkillBattleManager.PlayerFieldSelectEnable();
 								break;
 							}
 							// カード選択したか
 							if (m_SkillBattleManager.GetChoiceCount(m_Player.gameObject) > 0){
+								// ボタンオフ
+								m_SkillBattleManager.PlayerFieldSelectDisable();
+
 								// 敵カード選択
 								int tCardNum = m_SkillBattleManager.GetCardList(m_Target.gameObject).Count;
 								if (tCardNum != 0){
 									GameObject card = m_SkillBattleManager.GetCardList(m_Target.gameObject)[Random.Range(0, tCardNum)].gameObject;
 									m_SkillBattleManager.AddChoice(m_Target.gameObject, card.transform);
 								}
+
+								// 未選択カードをフェードアウト
+								m_SkillBattleManager.UnselectedFadeOut(m_Player.gameObject, m_Target.gameObject);
 
 								// プレイへ移行
 								m_Battle.Change(Battle.SKILL_BATTLE_PLAY);
@@ -236,23 +249,6 @@ public class BattleManager : MonoBehaviour
 						break;
 						// QUICK
 						case TimePhase.KEEP_END:{
-							// カード選択してるか
-							if (m_SkillBattleManager.GetChoiceCount(m_Player.gameObject) > 0){
-								// 敵カード選択
-								int tCardNum = m_SkillBattleManager.GetCardList(m_Target.gameObject).Count;
-								if (tCardNum != 0){
-									GameObject card = m_SkillBattleManager.GetCardList(m_Target.gameObject)[Random.Range(0, tCardNum)].gameObject;
-									m_SkillBattleManager.AddChoice(m_Target.gameObject, card.transform);
-								}
-
-								// プレイへ移行
-								m_Battle.Change(Battle.SKILL_BATTLE_PLAY);
-								m_Battle.Start();
-								return;
-							}
-							else{
-								m_SkillBattleManager.gameObject.SetActive(false);
-							}
 						}
 						break;
 						// QUICK_END
@@ -296,6 +292,16 @@ public class BattleManager : MonoBehaviour
 					return;
 				}
 		}
+
+		// 敵カード表示/非表示
+		bool isDisplayActive = dbg_TargetUIFiedlActive;
+		if (m_SkillBattleManager.GetChoiceCount(m_Target.gameObject) > 0){
+			foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Target.gameObject)){
+				ui.m_CanvasGroup.ignoreParentGroups = dbg_TargetSelectUIActive;
+			}
+		}
+		m_SkillBattleManager.UIFieldDisplayActive(SkillBattleManager.USER.TARGET, isDisplayActive);
+
 		m_Battle.Update();
 	}
 
@@ -395,9 +401,6 @@ public class BattleManager : MonoBehaviour
 		m_BattleInterval = BATTLE_START_INTERVAL;
 	}
 	
-	// 
-	bool isChange = false;
-	bool isFaedOut = false;
 	// バトルリザルト更新
 	void ResultUpdate()
 	{
@@ -407,173 +410,217 @@ public class BattleManager : MonoBehaviour
 				SkillBattlePhase nextPhase = (SkillBattlePhase)((int)SkillBattlePhase.START + 1);
                 m_SkillBattleManager.Battle(m_Player.gameObject, m_Target.gameObject, nextPhase);
                 StopCoroutine(m_BattleSlow);
-				Time.timeScale = SLOW_END2;
+				Time.timeScale = FIRST_SLOW_START1;
 				m_ResultPhase.Change(nextPhase);
 				m_ResultPhase.Start();
 				return;
 			}
+			case SkillBattlePhase.END:{ break; }
 			default:
 				{
 					// フェーズ開始時
 					if (m_ResultPhase.IsFirst())
 					{
-						m_MoreSlowTimer = 0.0f;
-						m_DelayUiSlideInTimer = 0.0f;
-                        m_SlowEnd = false;
-                        m_SlowStart = false;
-                    }
-
-                    CharCore winner = m_SkillBattleManager.GetWinner(m_ResultPhase.current).GetComponent<CharCore>();
-					AnimationManager winnerAnmMgr = winner.GetBrain().GetState().GetAnmMgr();
-
-                    // アニメーション切り変え中
-                    if (winnerAnmMgr.GetState() == AnmState.CHANGE)
-                    {
-						if (m_SlowEnd && !isChange){
-							isChange = true;
-
-							// 追撃UIのフェードアウト
-							foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Player.gameObject)){
-								if (ui.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("FeadOut")){
-									continue;
-								}
-								m_SkillBattleManager.UIFadeOut(ui);
-								break;
-							}
-							foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Target.gameObject)){
-								if (ui.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("FeadOut")){
-									continue;
-								}
-								m_SkillBattleManager.UIFadeOut(ui);
-								break;
-							}
-						}
-                        break;
-                    }
-					if (isChange){
-						isChange = false;
+						m_BattlePhaseProcess = StartCoroutine(BattlePhaseProcess());
 					}
 
-					// よりスローポイント
-                    if (!m_SlowEnd && winnerAnmMgr.GetPlayAnmData()._slowEndFrame <= winnerAnmMgr.GetFrame())
-                    {
-						// よりスロー維持状態
-						if (m_MoreSlowTimer == 0){
-							Time.timeScale = MORE_SLOW;
-						}
-						m_MoreSlowTimer += Time.unscaledDeltaTime;
-						// よりスロー時間の間break
-						if (m_MoreSlowTimer < MORE_SLOW_TIME){
-							// 途中でUIがはける
-							if (m_MoreSlowTimer > UI_OUT_TIME){
-								if (isFaedOut == true){
-									return;
-								}
-								isFaedOut = true;
-								// カード選択を行ったか?
-								SkillBattleManager.RESULT result;
-								result = m_SkillBattleManager.GetResultData(m_Player.gameObject, m_ResultPhase.current)._result;
-								foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Player.gameObject)){
-									m_SkillBattleManager.UIFadeOut(ui);
-									if (result == SkillBattleManager.RESULT.WIN){
-										break;
-									}
-								}
-								// カード選択を行ったか?
-								result = m_SkillBattleManager.GetResultData(m_Target.gameObject, m_ResultPhase.current)._result;
-								foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Target.gameObject)){
-									m_SkillBattleManager.UIFadeOut(ui);
-									if (result == SkillBattleManager.RESULT.WIN){
-										break;
-									}
-								}
-							}
-							break;
-						}
-						// 通常再生
-						Time.timeScale = BATTLE_NORMAL_TIME;
-                        m_SlowEnd = true;
-                    }
-					if (m_SlowEnd == false){
-						break;
-					}
-					if (isFaedOut == true){
-						isFaedOut = false;
-					}
-
-					// アニメーション連続再生中
-					if (winnerAnmMgr.GetAnmList().Count > 1 || winnerAnmMgr.GetState() == AnmState.CHAINE){
-						break;
-					}
-
-					if (m_SlowStart == false && m_SkillBattleManager.gameObject.activeSelf == true){
-						m_SkillBattleManager.gameObject.SetActive(false);
-						// 選択カードリセット
-						m_SkillBattleManager.ChoiceReset();
-						// 削除予定執行
-						m_SkillBattleManager.DestoryEnforcement();
-						// カード補充
-						m_SkillBattleManager.AddCardObject(m_Player.gameObject, 0);
-						m_SkillBattleManager.AddCardObject(m_Target.gameObject, 0);
-					}
-
-					// どちらかのHPが0以下になってる または 4フェーズ目ならバトル終了
-					bool isFin = (m_Player.GetBrain().GetInfo().m_HP <= 0 || m_Target.GetBrain().GetInfo().m_HP <= 0) || m_ResultPhase.current == (SkillBattlePhase)((int)SkillBattlePhase.END - 1);
-					if (isFin == true){
-						if (m_Player.GetBrain().GetState().GetAnmMgr().IsState(AnmState.LOOP | AnmState.END) && m_Target.GetBrain().GetState().GetAnmMgr().IsState(AnmState.LOOP | AnmState.END)){
-							m_ResultPhase.Change(SkillBattlePhase.END);
-							m_ResultPhase.Start();
-							return;
-						}
-						break;
-					}
- 
-                    // スローポイント
-                    if (!m_SlowStart && winnerAnmMgr.GetPlayAnmData()._slowStartFrame <= winnerAnmMgr.GetFrame())
-                    {
-                        m_BattleSlow = StartCoroutine(BattleSlow(SLOW_END2, SLOW_END2, 0, UI_SELECT_TIME + DELAY_UI_SLIDEIN_TIME, SLOW_END2, 0));
-                        m_SlowStart = true;
-                    }
-					if (m_SlowStart == false){
-						break;
-					}
-
-					// UI復活までの遅延処理
-					if (m_DelayUiSlideInTimer < DELAY_UI_SLIDEIN_TIME){
-						m_DelayUiSlideInTimer += Time.unscaledDeltaTime;
-						// UI復活
-						if (m_DelayUiSlideInTimer >= DELAY_UI_SLIDEIN_TIME){
-							m_SkillBattleManager.PlayerFieldButtonEnable();
-							m_SkillBattleManager.gameObject.SetActive(true);
-						}
-						else{
-							break;
-						}
-					}
-
-                    // アニメーション終了
-                    if (m_SkillBattleManager.GetChoiceCount(m_Player.gameObject) > 0 || m_TimePhase.current == TimePhase.KEEP_END)
-                    {
-                        // 敵カード選択
-                        int tCardNum = m_SkillBattleManager.GetCardList(m_Target.gameObject).Count;
-						if (tCardNum != 0){
-							GameObject card = m_SkillBattleManager.GetCardList(m_Target.gameObject)[Random.Range(0, tCardNum)].gameObject;
-							m_SkillBattleManager.AddChoice(m_Target.gameObject, card.transform);
-						}
-
-						
-						int phase = (int)m_ResultPhase.current + 1;
-                        m_ResultPhase.Change((SkillBattlePhase)phase);
+					
+					// フェーズ処理終了
+					if (m_BattlePhaseProcess == null){
+						int nextPhase = (int)m_ResultPhase.current + 1;
+						m_ResultPhase.Change((SkillBattlePhase)nextPhase);
 						m_ResultPhase.Start();
-						StopCoroutine(m_BattleSlow);
-                		m_SkillBattleManager.Battle(m_Player.gameObject, m_Target.gameObject, m_ResultPhase.current);
-
 						return;
 					}
 				}
 				break;
 		}
 		m_ResultPhase.Update();
+	}
+	
+	// フェーズ処理コルーチン
+	IEnumerator BattlePhaseProcess(){
+		// リザルトフェーズ取得
+		SkillBattlePhase phase = m_ResultPhase.current;
+
+		// フェーズの勝者取得
+		CharCore winner = m_SkillBattleManager.GetWinner(phase).GetComponent<CharCore>();
+		AnimationManager winnerAnmMgr = winner.GetBrain().GetState().GetAnmMgr();
+
+		// アニメーション切り替え中はリターン
+		// while(winnerAnmMgr.GetState() == AnmState.CHANGE){
+		// 	yield return null;
+		// }
+
+		// // よりスローポイント到達までリターン
+		// while(winnerAnmMgr.GetPlayAnmData()._slowEndFrame >= winnerAnmMgr.GetFrame()){
+		// 	yield return null;
+		// }
+
+		// よりスロー中
+		// Time.timeScale = MORE_SLOW;
+		// bool isUIFaedOut = false;
+		// bool isMoreSlow = true;
+		// float moreSlowTimer = 0;
+		// while(isMoreSlow){
+		// 	moreSlowTimer += Time.unscaledDeltaTime;
+		// 	// 途中でUIがはける
+		// 	if (isUIFaedOut == false && moreSlowTimer >= UI_OUT_TIME){
+		// 		isUIFaedOut = true;
+		// 		// スキルバトルのリザルトタイプ格納
+		// 		SkillBattleManager.RESULT result;
+		// 		result = m_SkillBattleManager.GetResultData(m_Player.gameObject, phase)._result;
+		// 		foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Player.gameObject)){
+		// 			m_SkillBattleManager.UIFadeOut(ui);
+		// 			// バトルに勝ってるなら1枚目だけフェードアウト
+		// 			if (result == SkillBattleManager.RESULT.WIN){
+		// 				break;
+		// 			}
+		// 		}
+		// 		result = m_SkillBattleManager.GetResultData(m_Target.gameObject, phase)._result;
+		// 		foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Target.gameObject)){
+		// 			m_SkillBattleManager.UIFadeOut(ui);
+		// 			if (result == SkillBattleManager.RESULT.WIN){
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+
+		// 	if (moreSlowTimer >= MORE_SLOW_TIME){
+		// 		isMoreSlow = false;
+		// 		// 再生速度を早回しにする
+		// 		Time.timeScale = BATTLE_NORMAL_TIME;
+		// 	}
+		// 	else{
+		// 		yield return null;
+		// 	}
+		// }
+
+		// スロー解除待ち時間
+		float timer = 0.0f;
+		while(timer < WAIT_TIME){
+			timer += Time.unscaledDeltaTime;
+			yield return null;
+		}
+
+		// スキルバトルのリザルトタイプ格納
+		SkillBattleManager.RESULT result;
+		result = m_SkillBattleManager.GetResultData(m_Player.gameObject, phase)._result;
+		foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Player.gameObject)){
+			m_SkillBattleManager.UIFadeOut(ui);
+			// バトルに勝ってるなら1枚目だけフェードアウト
+			if (result == SkillBattleManager.RESULT.WIN){
+				break;
+			}
+		}
+		result = m_SkillBattleManager.GetResultData(m_Target.gameObject, phase)._result;
+		foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(m_Target.gameObject)){
+			m_SkillBattleManager.UIFadeOut(ui);
+			if (result == SkillBattleManager.RESULT.WIN){
+				break;
+			}
+		}
+		// 通常再生
+		Time.timeScale = BATTLE_NORMAL_TIME;
+
+
+		// アニメーション連続再生中
+		while(winnerAnmMgr.GetAnmList().Count > 1 || winnerAnmMgr.GetState() == AnmState.CHAINE){
+			// 追撃UIフェードアウト
+			if (winnerAnmMgr.GetState() == AnmState.CHAINE){
+				foreach(SkillCardUI ui in m_SkillBattleManager.GetChoices(winner.gameObject)){
+					if (!ui.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("FeadOut")){
+						m_SkillBattleManager.UIFadeOut(ui);
+						break;
+					}
+				}
+			}
+			yield return null;
+		}
+		while(winnerAnmMgr.GetState() == AnmState.CHANGE){
+			yield return null;
+		}
+		while(winnerAnmMgr.GetPlayAnmData()._slowEndFrame > winnerAnmMgr.GetFrame()){
+			yield return null;
+		}
+
+		// スキルUIをリセット
+		m_SkillBattleManager.UIFieldIdle();
+		m_SkillBattleManager.AllUIIdle();
+		// 選択カードリセット
+		m_SkillBattleManager.ChoiceReset();
+		// 削除予定執行
+		m_SkillBattleManager.DestoryEnforcement();
+
+		// どちらかのHPが0以下になってる または 最終フェーズならバトル終了
+		bool isFin = (m_Player.GetBrain().GetInfo().m_HP <= 0 || m_Target.GetBrain().GetInfo().m_HP <= 0) || m_ResultPhase.current == (SkillBattlePhase)((int)SkillBattlePhase.END - 1);
+		if (isFin == true){
+			m_ResultPhase.Change(SkillBattlePhase.END);
+			m_ResultPhase.Start();
+			yield break;
+		}
+
+		// カード補充
+		m_SkillBattleManager.AddCardObject(m_Player.gameObject, 4);
+		m_SkillBattleManager.AddCardObject(m_Target.gameObject, 4);
+
+		// スロー再生開始ポイントまで待機
+		while(winnerAnmMgr.GetPlayAnmData()._slowStartFrame > winnerAnmMgr.GetFrame()){
+			yield return null;
+		}
+		
+		int endFrame = winnerAnmMgr.GetPlayAnmData()._endFrame;
+		int currentFrame = winnerAnmMgr.GetFrame();
+		int totalFrame = endFrame - currentFrame;
+		float totalTime = (float)totalFrame / AnimationManager.FRAME_RATE; // fpsで秒数を求める
+
+		// totalTime = Time.timeScale * (UI_SELECT_TIME + DELAY_UI_SLIDEIN_TIME);
+
+		float slow = totalTime / (UI_SELECT_TIME + DELAY_UI_SLIDEIN_TIME);
+		slow = Mathf.Max(slow, Vector3.kEpsilon);
+
+		// スロー開始
+		m_BattleSlow = StartCoroutine(BattleSlow(slow, slow, 0, UI_SELECT_TIME + DELAY_UI_SLIDEIN_TIME, FIRST_SLOW_START1, 0));
+		
+		
+		// UI復活時間まで待機
+		float delayUISlideInTimer = 0;
+		while(delayUISlideInTimer < DELAY_UI_SLIDEIN_TIME){
+			delayUISlideInTimer += Time.unscaledDeltaTime;
+			yield return null;
+		}
+
+		// UI復活
+		m_SkillBattleManager.PlayerFieldSelectEnable();
+		m_SkillBattleManager.UIFieldSlideIn();
+
+
+		// プレイヤーがカードを選択するかスロータイプがキープエンドに到達するまで待機
+		while(m_SkillBattleManager.GetChoiceCount(m_Player.gameObject) == 0 && m_TimePhase.current != TimePhase.KEEP_END){
+			yield return null;
+		}
+
+		m_TimePhase.Change(TimePhase.QUICK);
+		m_TimePhase.Start();
+		yield return null;
+
+		// ボタンをオフ
+		m_SkillBattleManager.PlayerFieldSelectDisable();
+
+		// 敵カード選択	
+		int tCardNum = m_SkillBattleManager.GetCardList(m_Target.gameObject).Count;
+		if (tCardNum != 0){
+			GameObject card = m_SkillBattleManager.GetCardList(m_Target.gameObject)[Random.Range(0, tCardNum)].gameObject;
+			m_SkillBattleManager.AddChoice(m_Target.gameObject, card.transform);
+		}
+		// 未選択UIフェードアウト
+		m_SkillBattleManager.UnselectedFadeOut(m_Player.gameObject, m_Target.gameObject);
+
+		SkillBattlePhase nextPhase = (SkillBattlePhase)((int)phase  +1);
+		m_SkillBattleManager.Battle(m_Player.gameObject, m_Target.gameObject, nextPhase);
+		StopCoroutine(m_BattleSlow);
+		m_BattlePhaseProcess = null;
+		// 終了
 	}
 
 	// スキルバトルマネージャー取得
